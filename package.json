@@ -1,0 +1,15 @@
+{
+  "name": "site-crawler",
+  "version": "1.0.0",
+  "description": "Small project for generating a site map / checking for broken links.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Stephen Crane",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^0.20.0",
+    "simplecrawler": "^0.6.2"
+  }
+}
