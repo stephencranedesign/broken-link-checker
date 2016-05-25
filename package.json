@@ -1,15 +1,22 @@
 {
-  "name": "site-crawler",
+  "name": "site-monitor",
   "version": "1.0.0",
   "description": "Small project for generating a site map / checking for broken links.",
-  "main": "main.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Stephen Crane",
   "license": "ISC",
   "dependencies": {
-    "cheerio": "^0.20.0",
+    "JSONStream": "^1.1.1",
+    "body-parser": "^1.15.1",
+    "event-stream": "^3.3.2",
+    "express": "^4.13.4",
+    "ftp": "^0.3.10",
+    "ftp-client": "^0.2.2",
+    "googleapis": "^7.0.0",
+    "mongoose": "^4.4.17",
     "simplecrawler": "^0.6.2"
   }
 }

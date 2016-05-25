@@ -1,0 +1,61 @@
+[
+    {
+        fileName: ''
+        statusCode: 200,
+        fileType: '',
+        children: [
+            {
+                fileName: '',
+                statusCode: 200,
+                fileType: '',
+                children: [
+                    {},
+                    {},
+                    {}
+                ]
+            },
+            {},
+        ]
+    },
+    {},
+    {}
+]
+
+Database
+    - Sites
+        - url [string]
+        - simplecrawler config [object]
+        - crawlStatus [bool]
+        - linkList [obj]
+            - link
+                - filetype
+                - refererUrl
+                - statusCode
+        
+Hub Server
+    - houses database
+        - end points for setting and getting info.
+            - add site
+            - get site
+            - delete site
+            - update site
+            - end point: /url/brokenLinks
+    - controls the Dashboard Client
+        - authentication?
+        - list of sites
+            - crawl status
+            - broken link explorer
+                - filter by file type
+                - list out number of file types and broken links for each file type
+        - ability to add a new site to crawl from dashboard
+    - scheduler
+        - for every site in db 
+            - run crawler module
+                
+My Crawler - module
+    - takes a url, object of simplecrawler settings.
+        - complete function would get the generated obj.
+            - from there hit the end point to save data to hub server.
+    - set some way to check on progress
+        - poll for number of urls to check vs. completed urls checked?
+    - should be able to run on hub server or split off onto seperate server for large sites.

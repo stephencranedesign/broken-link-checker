@@ -1,11 +1,11 @@
 {
     "production": {
-        "url": "mongodb://localhost/shopping-list"
+        "url": "mongodb://localhost/site-monitor"
     },
     "test": {
-        "url": "mongodb://localhost/shopping-list-test"
+        "url": "mongodb://localhost/site-monitor-test"
     },
     "development": {
-        "url": "mongodb://localhost/shopping-list-dev"
+        "url": "mongodb://localhost/site-monitor-dev"
     }
 }
