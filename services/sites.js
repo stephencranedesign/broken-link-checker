@@ -1,5 +1,4 @@
-var Sites = require('../models/Sites.js').Sites,
-    mongoose = require('../models/Sites.js').mongoose;
+var Sites = require('../models/Sites.js');
 
 function _normalizeUrl(url) {
     // regex to normalize entries somehow?
@@ -34,10 +33,10 @@ module.exports.save = function(site, callback, errback) {
     });
 };
 
-module.exports.findSite = function(url, callback, errback) {
+module.exports.findLinksForSite = function(url, callback, errback) {
     url = _normalizeUrl(url);
     console.log('url: ', url);
-    Sites.findOne({url: url}, 'url date links' ,function(err, doc) {
+    Sites.findOne({url: url}, 'url date links').lean().exec(function(err, doc) {
         if(err) {
             errback(err);
             return;
@@ -60,6 +59,19 @@ module.exports.findBrokenLinks = function(url, callback, errback) {
     });
 };
 
+module.exports.findSite = function(url, callback, errback) {
+    url = _normalizeUrl(url);
+    console.log('url: ', url);
+    Sites.findOne({url: url}, function(err, doc) {
+        if(err) {
+            errback(err);
+            return;
+        }
+
+        callback(doc);
+    });
+};
+
 module.exports.list = function(callback, errback) {
     Sites.find(function(err, items) {
         if (err) {
@@ -71,14 +83,27 @@ module.exports.list = function(callback, errback) {
     });
 };
 
-module.exports.remove = function(callback, errback) {
-    Sites.remove(function(err, item) {
-        if(err) {
-            callback(err);
-            return;
-        }
+module.exports.remove = function(path, callback, errback) {
+    if(path === null || path === 'all') {
+        Sites.remove(function(err, item) {
+            if(err) {
+                callback(err);
+                return;
+            }
 
-        callback(item);
-        // mongoose.disconnect();
-    });
+            callback(item);
+            // mongoose.disconnect();
+        });
+    }
+    else {
+        Sites.remove(path, function(err, item) {
+            if(err) {
+                callback(err);
+                return;
+            }
+
+            callback(item);
+            // mongoose.disconnect();
+        });
+    }
 };

@@ -17,11 +17,28 @@
 	<main>
 		<h1>Home</h1>
 		<img src="/img/test.jpg" />
+
+		<h2>Find info about a site</h2>
 		<input type="text" id="urlInput" value="cernecalcium.com">
 		<button id="info">get info for site</button>
 		<button id="url">sort by url</button>
 		<button id="fileType">sort by fileType</button>
 		<button id="errorCode">sort by errorCode</button>
+		<hr>
+
+		<h2>Crawl a site</h2>
+		<input type="text" id="crawlInput" value="cernecalcium.com">
+		<button id="crawlStart">start</button>
+		<hr>
+
+		<h2>List a site</h2>
+		<input type="text" id="listInput" value="cernecalcium.com">
+		<button id="listStart">start</button>
+		<div id="list" class="list"></div>
+
+		<h2>delete a site</h2>
+		<input type="text" id="deleteInput" value="cernecalcium.com">
+		<button id="deleteStart">start</button>
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 	<script src="/js/site.js"></script>
