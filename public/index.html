@@ -24,21 +24,41 @@
 		<button id="url">sort by url</button>
 		<button id="fileType">sort by fileType</button>
 		<button id="errorCode">sort by errorCode</button>
+		
 		<hr>
 
-		<h2>Crawl a site</h2>
+		<h2>Crawling</h2>
+
+		<h4>Crawl a site</h4>
+		<input type="text" id="protocol" value="http">
 		<input type="text" id="crawlInput" value="cernecalcium.com">
+		<input type="text" id="path" value="/">
+		<input type="text" id="port" value="80">
+		<input type="text" id="interval" value="250">
+		<input type="text" id="maxConcurrency" value="1">
+		<input type="text" id="depth" value="1">
+
 		<button id="crawlStart">start</button>
 		<hr>
 
-		<h2>List a site</h2>
+		<h4>List a site</h4>
 		<input type="text" id="listInput" value="cernecalcium.com">
 		<button id="listStart">start</button>
 		<div id="list" class="list"></div>
 
-		<h2>delete a site</h2>
+		<h4>delete a site</h4>
 		<input type="text" id="deleteInput" value="cernecalcium.com">
 		<button id="deleteStart">start</button>
+
+		<hr>
+		<h2>Users</h2>
+		<h4>Create a user</h4>
+		<input type="text" id="username" placeholder="username">
+		<input type="password" id="password" placeholder="password">
+		<button id="createUser">create user</button>
+
+		<h4>list users</h4>
+		<button id="listUsers">list users</button>
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 	<script src="/js/site.js"></script>

@@ -11,6 +11,7 @@ function _create(site, callback, errback) {
             errback(err);
             return;
         }
+        console.log('_create');
         callback(doc);
         // mongoose.disconnect();
         return;
@@ -18,10 +19,8 @@ function _create(site, callback, errback) {
 }
 
 module.exports.save = function(site, callback, errback) {
-    console.log('site: ', site);
     site.url = _normalizeUrl(site.url);
-    console.log('##### site: ', site.url);
-
+    console.log('save');
     Sites.findOneAndUpdate({url: site.url}, { links: site.links, date: new Date().toLocaleString(), brokenLinks: site.brokenLinks }, function(err, doc) {
         if(err) {
             errback(err);
@@ -29,13 +28,13 @@ module.exports.save = function(site, callback, errback) {
         }
 
         if(doc === null) _create(site, callback, errback);
+        else callback(doc);
         // else mongoose.disconnect();
     });
 };
 
 module.exports.findLinksForSite = function(url, callback, errback) {
     url = _normalizeUrl(url);
-    console.log('url: ', url);
     Sites.findOne({url: url}, 'url date links').lean().exec(function(err, doc) {
         if(err) {
             errback(err);
@@ -48,7 +47,6 @@ module.exports.findLinksForSite = function(url, callback, errback) {
 
 module.exports.findBrokenLinks = function(url, callback, errback) {
     url = _normalizeUrl(url);
-    console.log('url: ', url);
     Sites.findOne({url: url}, 'url date brokenLinks' ,function(err, doc) {
         if(err) {
             errback(err);
@@ -61,7 +59,6 @@ module.exports.findBrokenLinks = function(url, callback, errback) {
 
 module.exports.findSite = function(url, callback, errback) {
     url = _normalizeUrl(url);
-    console.log('url: ', url);
     Sites.findOne({url: url}, function(err, doc) {
         if(err) {
             errback(err);

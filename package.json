@@ -11,12 +11,23 @@
   "dependencies": {
     "JSONStream": "^1.1.1",
     "body-parser": "^1.15.1",
+    "cookie-parser": "^1.4.3",
     "event-stream": "^3.3.2",
     "express": "^4.13.4",
+    "express-authentication": "^0.3.2",
+    "express-session": "^1.13.0",
     "ftp": "^0.3.10",
     "ftp-client": "^0.2.2",
     "googleapis": "^7.0.0",
     "mongoose": "^4.4.17",
-    "simplecrawler": "^0.6.2"
+    "passport": "^0.3.2",
+    "passport-local": "^1.0.0",
+    "request": "^2.72.0",
+    "simplecrawler": "^0.6.2",
+    "zombie-cors": "^4.2.24"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-http": "^2.0.1"
   }
 }

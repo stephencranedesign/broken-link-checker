@@ -1,7 +1,5 @@
 var mongoose = require('mongoose');
-var env = require('../environment');
-var config = require('./config');
-
-mongoose.connect(config[env].url);
+console.log('test: ', process.env['DB_'+process.env.enviornment]);
+mongoose.connect(process.env['DB_'+process.env.enviornment]);
 
 module.exports = mongoose;
