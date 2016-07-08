@@ -22,6 +22,8 @@
 
 require('./config.js');
 
+var readline = require('readline');
+
 var google = require('googleapis');
 var OAuth2Client = google.auth.OAuth2;
 var webmasters = google.webmasters('v3');
@@ -32,85 +34,42 @@ var REDIRECT_URL = 'http://localhost:8080/api/google/oauth2callback';
 
 var oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
 
-var authUrl = oauth2Client.generateAuthUrl({
-  access_type: 'offline', // will return a refresh token
-  scope: 'https://www.googleapis.com/auth/webmasters' // an array of scopes
+var rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
 });
 
-module.exports.config = function(app) {
-  app.get('/api/google/auth', function(req, res) {
-    res.redirect(authUrl);
+function getAccessToken (oauth2Client, callback) {
+  // generate consent page url
+  var url = oauth2Client.generateAuthUrl({
+    access_type: 'offline', // will return a refresh token
+    scope: 'https://www.googleapis.com/auth/webmasters' // an array of scopes
   });
 
-  // set credentials once.
-  app.get('/api/google/oauth2callback', function(req, res) {
-    oauth2Client.getToken(req.query.code, function (err, tokens) {
-        if (err) {
-          return callback(err);
-        }
-
-        console.log('tokens: ', tokens);
-        // set tokens to the client
-        // TODO: tokens should be set by OAuth2 client.
-        oauth2Client.setCredentials(tokens);
-
-        res.redirect('/');
-      });
-  });
-};
-
-// function getAccessToken (oauth2Client, callback) {
-
-//   console.log('client: ', oauth2Client);
-
-//   // generate consent page url
-//   var url = oauth2Client.generateAuthUrl({
-//     access_type: 'offline', // will return a refresh token
-//     scope: 'https://www.googleapis.com/auth/webmasters' // an array of scopes
-//   });
-
-//   console.log('Visit the url: ', url);
-//   // rl.question('Enter the code here:', function (code) {
-//   //   // request access token
-//   //   oauth2Client.getToken(code, function (err, tokens) {
-//   //     if (err) {
-//   //       return callback(err);
-//   //     }
-
-//   //     console.log('tokens: ', tokens);
-//   //     // set tokens to the client
-//   //     // TODO: tokens should be set by OAuth2 client.
-//   //     oauth2Client.setCredentials(tokens);
-//   //     callback();
-//   //   });
-//   // });
-// }
-
-module.exports.addSite = function(siteUrl, callback) {
-    webmasters.sites.add({auth: oauth2Client, siteUrl: siteUrl}, function(err, o) {
-      if(err) {
-        return console.log('an error occured', err);
+  console.log('Visit the url: ', url);
+  rl.question('Enter the code here:', function (code) {
+    // request access token
+    oauth2Client.getToken(code, function (err, tokens) {
+      if (err) {
+        return callback(err);
       }
-      console.log('o: ', o);
+      // set tokens to the client
+      // TODO: tokens should be set by OAuth2 client.
+      oauth2Client.setCredentials(tokens);
+      callback();
     });
-};
-
-module.exports.submitSiteMap = function(siteUrl, feedpath, callback) {
-  console.log('url: ', siteUrl, 'feedpath: ', feedpath);
-  webmasters.sitemaps.submit({auth: oauth2Client, siteUrl: siteUrl, feedpath: feedpath}, function(err, o) {
-      if(err) {
-        return console.log('an error occured', err);
-      }
-      
-      if(callback) callback(o);
   });
-};
+}
 
-
-function test() {
-
+// retrieve an access token
+getAccessToken(oauth2Client, function () {
   // retrieve user profile
-
+  // webmasters.sites.add({auth: oauth2Client, siteUrl: 'www.stephencranedesign.com'}, function(err, o) {
+  //   if(err) {
+  //     return console.log('an error occured', err);
+  //   }
+  //   console.log('o: ', o);
+  // });
   
   webmasters.sites.list({auth: oauth2Client}, function(err, o) {
     if(err) {
@@ -118,13 +77,4 @@ function test() {
     }
     console.log('o: ', o);
   });
-
-};
-
-/* 
-  goal
-    when site is created, request 
-*/
-
-// module.exports.client = oauth2Client;
-
+});

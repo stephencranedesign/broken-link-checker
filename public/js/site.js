@@ -43,10 +43,11 @@ var siteInfo = (function($) {
 	var interval = $('#interval');
 	var concurrency = $('#maxConcurrency');
 	var depth = $('#depth');
+	var crawlFrequency = $('#crawlFrequency');
 
 	crawlStart.on('click', function() {
 		var url = crawlInput.val();
-		$.post('/api/crawler/'+url+'/start', { initialProtocol: protocol.val(), initialPath: path.val(), initialPort: port.val(), interval: interval.val(), maxConcurrency: concurrency.val() }, function(data) {
+		$.post('/api/crawler/'+url+'/register', { initialProtocol: protocol.val(), initialPath: path.val(), initialPort: port.val(), interval: interval.val(), maxConcurrency: concurrency.val(), crawlFrequency: crawlFrequency.val() }, function(data) {
 			console.log('crawl finished');
 		}, 'application/x-www-form-urlencoded');
 	});
@@ -59,9 +60,9 @@ var siteInfo = (function($) {
 	listStart.on('click', function() {
 		var url = listInput.val();
 		$.get('/api/sites/find/'+url, function(data) {
+			console.log('done', data);
 			var brokenLinks = data.brokenLinks.length;
 			list.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><ul>'+buildList(data.brokenLinks)+'</ul></div>');
-			console.log('done', data);
 		});
 	});
 	buildList = function(list) {
@@ -80,7 +81,8 @@ var siteInfo = (function($) {
 
 	deleteStart.on('click', function() {
 		var url = deleteInput.val();
-		$.get('/api/sites/delete/'+url, function(data) {
+		console.log('url: ', url);
+		$.post('/api/crawler/'+url+'/unRegister', function(data) {
 			console.log('done', data);
 		});
 	});

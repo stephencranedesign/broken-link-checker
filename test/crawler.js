@@ -1,32 +1,62 @@
 var chai = require('chai');
+var should = chai.should();
+var crawler = require('../custom-modules/crawler.js');
+var sinon = require('sinon');
+
+// describe('crawler api', function() {
+// 	describe('crawl', function() {
+// 		var discoverResources = false;
+// 		var onCalled = [];
+// 		var startCalled = false;
+
+// 		var CrawlerStub = function() {
+// 			console.log('yo');
+// 			return this;
+// 		};
+// 		CrawlerStub.prototype.discoverResources = function() { discoverResources = true; };
+// 		CrawlerStub.prototype.on = function(name, func) { onCalled.push(name); };
+// 		CrawlerStub.prototype.start = function() { startCalled = true; };
+
+// 		spy = sinon.spy(CrawlerStub);
+// 		crawler.mockCrawler(spy);
+// 		crawler.crawl('www.test.org', {}, function() {}, function() {});
+// 		it('should have fired discoverResources function', function() {
+// 			discoverResources.should.be.true;
+// 		});
+// 	});
+// });
+
+/* endpoints.. */
 var chaiHttp = require('chai-http');
 var server = require('../server.js');
-
-var should = chai.should();
 var app = server.app;
-
 chai.use(chaiHttp);
 
-describe('crawler api', function() {
-
-	describe('status endpoint', function() {
-		it('should return false message when not currently crawling', function() {
-			chai.request(app)
-	            .get('/api/crawler/testUrl/status')
-	            .end(function(err, res) {
-	            	should.equal(err, null);
-	                res.should.have.status(200);
-	                res.body.crawling.should.be.false;
-	                res.body.host.should.equal('testUrl');
-	                done();
-	            });
-		});
-
-		it('should return true message when not currently crawling', function() {});
-	});
-	
-	describe('start endpoint', function() {
-		it('should begin a crawl if .isCrawling() returns false message', function() {});
-		it('should not begin a crawl if .isCrawling() returns true message', function() {});
-	});
-});
+// describe('crawler endpoints', function() {
+// 	describe('status endpoint', function() {
+// 		it('should return false message when not currently crawling', function(done) {
+// 			chai.request(app)
+// 				.get('/api/crawler/testUrl/status')
+// 				.end(function(err, res) {
+// 					res.should.have.status(200);
+// 					should.equal(res.body.crawling, false);
+// 					should.equal(res.body.host, 'testUrl');
+// 					done();
+// 				});
+// 		});
+// 		// it('should return true message when currently crawling', function(done) {
+// 		// 	chai.request(app)
+// 		// 		.get('/api/crawler/cerneCalcium/register')
+// 		// 		.end(function(err, res) {
+// 		// 			chai.request(app)
+// 		// 				.get('/api/crawler/testUrl/status')
+// 		// 				.end(function(err, res) {
+// 		// 					res.should.have.status(200);
+// 		// 					should.equal(res.body.crawling, true);
+// 		// 					should.equal(res.body.host, 'testUrl');
+// 		// 					done();
+// 		// 				});
+// 		// 		});
+// 		// });
+// 	});
+// });

@@ -1,0 +1,41 @@
+<!html doctype>
+<html>
+<head>
+	<link rel="/css/stylesheet" href="/css/site.css">
+</head>
+<body>
+	<header>
+		<nav>
+			<a href="/">home</a>
+			<a href="/post-a-site.html">post a site</a>
+			<a href="/query-a-site.html">query a site</a>
+		</nav>
+	</header>
+	<main>
+		<h2>Post a Site</h2>
+		
+		<input type="text" id="protocol" value="http">
+		<input type="text" id="crawlInput" value="cernecalcium.com">
+		<input type="text" id="path" value="/">
+		<input type="text" id="port" value="80">
+		<input type="text" id="interval" value="250">
+		<input type="text" id="maxConcurrency" value="1">
+		<input type="text" id="depth" value="1">
+		<input type="text" id="crawlFrequency" value="300">
+
+		<button id="crawlStart">register a site</button>
+
+		<hr>
+
+		<h2>Unregister a site</h2>
+		<input type="text" id="deleteInput" value="cernecalcium.com">
+		<button id="deleteStart">unregister site</button>
+
+	</main>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+	<script src="/js/site.js"></script>
+	<footer>
+
+	</footer>
+</body>
+</html>

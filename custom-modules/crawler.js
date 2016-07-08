@@ -1,22 +1,51 @@
 var Crawler = require('simplecrawler');
-// var SiteService = require('./services/sites.js');
+var cheerio = require('cheerio');
 var Site = require('./Site.js');
+var loopObj = require('./utils.js').loopObj;
 
 var currCrawls = {};
 
-module.exports.isCrawling = function(url) {
-    return currCrawls.hasOwnProperty(url) ? true : false;
-};
+function crawl(host, config, onComplete) {
 
-module.exports.crawl = function(host, config, onComplete) {
-
-    console.log('crawl', host, config);
+    console.log('config: ', config);
 
     currCrawls[host] = true;
-
     var host = host;
-
     var myCrawler = new Crawler(host);
+    var crawlFrequency = config.crawlFrequency || 10080; // 7 days.
+
+    myCrawler.discoverResources = function(buffer, queueItem) {
+        var $ = cheerio.load(buffer.toString("utf8"));
+
+        var resources = [];
+     
+        /* page links */
+        $("a[href]").map(function () {
+            var href = $(this).attr('href');
+
+            /* has a hash -> shouldn't have to worry about a hash url and it causes an error */
+            if(/#/.test(href)) return;
+
+            resources.push(href);
+        }).get();
+
+        /* imgs */
+        $("img[src]").map(function () {
+            resources.push($(this).attr("src"));
+        }).get();
+
+        /* scripts */
+        $("scripts[href]").map(function () {
+            resources.push($(this).attr("href"));
+        }).get();
+
+        /* styles */
+        $("link[rel='stylesheet']").map(function () {
+            resources.push($(this).attr("href"));
+        }).get();
+
+        return resources;
+    };
 
     myCrawler.initialProtocol = config.initialProtocol || 'http';
     myCrawler.initialPath = config.initialPath || '/';
@@ -26,28 +55,21 @@ module.exports.crawl = function(host, config, onComplete) {
 
     var site;
 
-    myCrawler.on('crawlstart', function() { console.log('start'); site = new Site(host); });
+    myCrawler.on('crawlstart', function() { 
+        console.log('start'); 
+        site = new Site(host, crawlFrequency, config); 
+    });
 
     myCrawler.on('fetchstart', function(queueItem, requestOptions) {
-        console.log('fetchstart');
-        site.setlinksIndex(queueItem.url);
-        site.addRequest(requestOptions);
+        site.fetchStart(queueItem);
     });
 
-    myCrawler.on('fetchcomplete', function(queueItem, responseBuffer, response) {
-        console.log('fetchcomplete');
-        site.addResponse(queueItem.url, response);
-    });
-
-    // require('./db/connect');
-
-    myCrawler.on('fetcherror', function(queueItem, response) {
-        site.addResponse(queueItem.url, response);
+    myCrawler.on('fetchtimeout', function(queueItem, crawlerTimeoutValue) {
+        site.fetchTimeout(queueItem, crawlerTimeoutValue);
     });
 
     myCrawler.on('complete', function() {
-        site.findBrokenLinks();
-        console.log('complete');
+        site.processLinks();
         onComplete(site);
         delete currCrawls[host];
     });
@@ -55,3 +77,29 @@ module.exports.crawl = function(host, config, onComplete) {
     myCrawler.start();
 };
 
+function isCrawling(url) {
+    return currCrawls.hasOwnProperty(url) ? true : false;
+};
+
+/*
+    returns number of sites currently indexing.
+*/
+function isIdle() {
+    var idle = true;
+    loopObj(currCrawls, function() {
+        idle = false;
+    });
+    return idle;
+};
+
+function mockCrawler(stub) {
+    Crawler = stub;
+};
+
+module.exports.currCrawls = currCrawls;
+module.exports.isCrawling = isCrawling;
+module.exports.crawl = crawl;
+module.exports.isIdle = isIdle;
+
+/* for tests */
+module.exports.mockCrawler = mockCrawler;

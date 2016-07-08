@@ -12,23 +12,17 @@
 		</nav>
 	</header>
 	<main>
-		<h1>Home</h1>
-		<p>current sites registered:</p>
-		<ul id="sites">
+		<h1>Query a site</h1>
 
-		</ul>
+		<input type="text" id="listInput" value="cernecalcium.com">
+		<button id="listStart">get info</button>
+		<div id="list" class="list"></div>
 
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-	<script>
-		$.get("/api/sites/list", function(data) {
-			var sites = [];
-			var ul = $('#sites');
-			data.forEach(function(o) {
-				sites.push("<li>"+o.url+"</li>")
-			});
-			ul.html(sites.join(''));
-		});
-	</script>
+	<script src="/js/site.js"></script>
+	<footer>
+
+	</footer>
 </body>
 </html>

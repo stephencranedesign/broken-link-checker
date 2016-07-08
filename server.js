@@ -6,12 +6,11 @@ var bodyParser = require('body-parser');
 
 var siteRoutes = require('./routes/sites');
 var crawlerRoutes = require('./routes/crawler');
-var userRoutes = require('./routes/users');
 
 var app = express();
 app.use(express.static('public'));
 
-require('./custom-modules/googleApis.js').config(app);
+// require('./custom-modules/google-apis.js').config(app);
 
 
 /* for login stuff.. */
@@ -19,12 +18,12 @@ require('./custom-modules/googleApis.js').config(app);
 // auth.config(app);
 
 // app.use(auth.isAuthenticated('/login.html'));
+
 // if(typeof auth === 'undefined')
 app.use(bodyParser.urlencoded({ extended: true }));	
 
 app.use('/', siteRoutes);
 app.use('/', crawlerRoutes);
-app.use('/', userRoutes);
 
 app.use('*', function(req, res) {
     res.status(404).json({ message: 'Not Found' });

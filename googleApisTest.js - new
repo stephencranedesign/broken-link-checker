@@ -20,7 +20,7 @@
 
 'use strict';
 
-require('../config.js');
+require('./config.js');
 
 var google = require('googleapis');
 var OAuth2Client = google.auth.OAuth2;
@@ -86,31 +86,45 @@ module.exports.config = function(app) {
 //   // });
 // }
 
-function addSite(siteUrl, callback) {
+module.exports.addSite = function(siteUrl, callback) {
     webmasters.sites.add({auth: oauth2Client, siteUrl: siteUrl}, function(err, o) {
-      if(err) {
-        return callback(err);
-      }
-
-      callback(o);
-    });
-};
-
-function submitSiteMap(siteUrl, feedpath, callback) {
-  webmasters.sitemaps.submit({auth: oauth2Client, siteUrl: siteUrl, feedpath: feedpath}, function(err, o) {
       if(err) {
         return console.log('an error occured', err);
       }
+      console.log('o: ', o);
+    });
+};
 
-      if(o === 'Not Found') {
-        return addSite(siteUrl, function(o) {
-          callback({ status: 'siteAdded' });
-        });
+module.exports.submitSiteMap = function(siteUrl, feedpath, callback) {
+  console.log('url: ', siteUrl, 'feedpath: ', feedpath);
+  webmasters.sitemaps.submit({auth: oauth2Client, siteUrl: siteUrl, feedpath: feedpath}, function(err, o) {
+      if(err) {
+        return console.log('an error occured', err);
       }
       
       if(callback) callback(o);
   });
 };
 
-module.exports.submitSiteMap = submitSiteMap;
-module.exports.addSite = addSite;
+
+function test() {
+
+  // retrieve user profile
+
+  
+  webmasters.sites.list({auth: oauth2Client}, function(err, o) {
+    if(err) {
+      return console.log('an error occured', err);
+    }
+    console.log('o: ', o);
+  });
+
+};
+
+/* 
+  goal
+    when site is created, request 
+*/
+
+// module.exports.client = oauth2Client;
+

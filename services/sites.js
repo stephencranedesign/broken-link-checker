@@ -1,4 +1,5 @@
 var Sites = require('../models/Sites.js');
+var mongoose = require('mongoose');
 
 function _normalizeUrl(url) {
     // regex to normalize entries somehow?
@@ -6,31 +7,58 @@ function _normalizeUrl(url) {
 }
 
 function _create(site, callback, errback) {
-    Sites.create({ url: site.url, links: site.links, date: new Date().toLocaleString(), brokenLinks: site.brokenLinks }, function(err, doc) {
-        if (err) {
-            errback(err);
+    Sites.create(
+        { 
+            url: site.url, 
+            links: site.links, 
+            date: new Date().toLocaleString(), 
+            brokenLinks: site.brokenLinks,
+            actualLinks: site.actualLinks,
+            redirectedLinks: site.redirectedLinks,
+            fetchTimeouts: site.fetchTimeouts,
+            crawlFrequency: site.crawlFrequency,
+            crawlOptions: site.crawlOptions
+        }, function(err, doc) {
+            if (err) {
+                errback(err);
+                return;
+            }
+            console.log('_create');
+            callback(doc);
+            // mongoose.disconnect();
             return;
         }
-        console.log('_create');
-        callback(doc);
-        // mongoose.disconnect();
-        return;
-    });
+    );
 }
 
 module.exports.save = function(site, callback, errback) {
     site.url = _normalizeUrl(site.url);
-    console.log('save');
-    Sites.findOneAndUpdate({url: site.url}, { links: site.links, date: new Date().toLocaleString(), brokenLinks: site.brokenLinks }, function(err, doc) {
-        if(err) {
-            errback(err);
-            return;
-        }
+    // console.log('save', site, '***********');
+    // console.log('brokenLinks: ', site.brokenLinks);
+    Sites.findOneAndUpdate(
+        {
+            url: site.url
+        }, 
+        { 
+            links: site.links, 
+            date: new Date().toLocaleString(), 
+            brokenLinks: site.brokenLinks,
+            actualLinks: site.actualLinks,
+            redirectedLinks: site.redirectedLinks,
+            fetchTimeouts: site.fetchTimeouts,
+            crawlFrequency: site.crawlFrequency,
+            crawlOptions: site.crawlOptions
+        }, function(err, doc) {
+            if(err) {
+                errback(err);
+                return;
+            }
 
-        if(doc === null) _create(site, callback, errback);
-        else callback(doc);
-        // else mongoose.disconnect();
-    });
+            if(doc === null) _create(site, callback, errback);
+            else callback(doc);
+            // else mongoose.disconnect();
+        }
+    );
 };
 
 module.exports.findLinksForSite = function(url, callback, errback) {
@@ -45,7 +73,7 @@ module.exports.findLinksForSite = function(url, callback, errback) {
     });
 };
 
-module.exports.findBrokenLinks = function(url, callback, errback) {
+module.exports.findbrokenLinks = function(url, callback, errback) {
     url = _normalizeUrl(url);
     Sites.findOne({url: url}, 'url date brokenLinks' ,function(err, doc) {
         if(err) {
@@ -81,6 +109,7 @@ module.exports.list = function(callback, errback) {
 };
 
 module.exports.remove = function(path, callback, errback) {
+    console.log('remove: ', path);
     if(path === null || path === 'all') {
         Sites.remove(function(err, item) {
             if(err) {
@@ -93,7 +122,7 @@ module.exports.remove = function(path, callback, errback) {
         });
     }
     else {
-        Sites.remove(path, function(err, item) {
+        Sites.remove({url: path}, function(err, item) {
             if(err) {
                 callback(err);
                 return;
@@ -103,4 +132,15 @@ module.exports.remove = function(path, callback, errback) {
             // mongoose.disconnect();
         });
     }
+};
+
+module.exports.drop = function(callback, errback) {
+    mongoose.connection.collections['sites'].drop( function(err) {
+        if(err) {
+            console.log('err: ', err);
+            errback(err);
+        }
+
+        callback();
+    });
 };

@@ -11,6 +11,7 @@
   "dependencies": {
     "JSONStream": "^1.1.1",
     "body-parser": "^1.15.1",
+    "cheerio": "^0.20.0",
     "cookie-parser": "^1.4.3",
     "event-stream": "^3.3.2",
     "express": "^4.13.4",
@@ -24,10 +25,14 @@
     "passport-local": "^1.0.0",
     "request": "^2.72.0",
     "simplecrawler": "^0.6.2",
+    "timer.js": "^1.0.4",
     "zombie-cors": "^4.2.24"
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "chai-http": "^2.0.1"
+    "chai-as-promised": "^5.3.0",
+    "chai-for-sinon": "^0.1.0",
+    "chai-http": "^2.0.1",
+    "sinon": "^1.17.4"
   }
 }
