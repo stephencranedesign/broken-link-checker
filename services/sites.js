@@ -17,7 +17,8 @@ function _create(site, callback, errback) {
             redirectedLinks: site.redirectedLinks,
             fetchTimeouts: site.fetchTimeouts,
             crawlFrequency: site.crawlFrequency,
-            crawlOptions: site.crawlOptions
+            crawlOptions: site.crawlOptions,
+            crawlDurationInSeconds: site.crawlDurationInSeconds
         }, function(err, doc) {
             if (err) {
                 errback(err);
@@ -47,7 +48,8 @@ module.exports.save = function(site, callback, errback) {
             redirectedLinks: site.redirectedLinks,
             fetchTimeouts: site.fetchTimeouts,
             crawlFrequency: site.crawlFrequency,
-            crawlOptions: site.crawlOptions
+            crawlOptions: site.crawlOptions,
+            crawlDurationInSeconds: site.crawlDurationInSeconds
         }, function(err, doc) {
             if(err) {
                 errback(err);

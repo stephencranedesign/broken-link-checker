@@ -25,3 +25,12 @@ module.exports.loopObj = function (obj, func) {
         func(obj[prop]);
     }
 }
+
+module.exports.capDecimals = function(num, duration) {
+	var val = 10;
+	if(duration === 2) val = 100;
+	else if( duration === 3 ) val = 1000;
+	else if( duration === 4 ) val = 10000;
+
+	return Math.round(num * 100) / val;
+};

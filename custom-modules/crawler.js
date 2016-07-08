@@ -1,18 +1,21 @@
 var Crawler = require('simplecrawler');
 var cheerio = require('cheerio');
-var Site = require('./Site.js');
+var Site = require('./Site.js').Site;
+var SiteStatus = require('./Site.js').SiteStatus;
 var loopObj = require('./utils.js').loopObj;
 
 var currCrawls = {};
 
 function crawl(host, config, onComplete) {
 
-    console.log('config: ', config);
-
-    currCrawls[host] = true;
     var host = host;
     var myCrawler = new Crawler(host);
     var crawlFrequency = config.crawlFrequency || 10080; // 7 days.
+
+    var site = new Site(host, crawlFrequency, config); 
+    var siteStatus = new SiteStatus();
+
+    currCrawls[host] = siteStatus;
 
     myCrawler.discoverResources = function(buffer, queueItem) {
         var $ = cheerio.load(buffer.toString("utf8"));
@@ -56,20 +59,29 @@ function crawl(host, config, onComplete) {
     var site;
 
     myCrawler.on('crawlstart', function() { 
+        site.crawlStarted();
         console.log('start'); 
-        site = new Site(host, crawlFrequency, config); 
     });
 
     myCrawler.on('fetchstart', function(queueItem, requestOptions) {
         site.fetchStart(queueItem);
     });
 
+    myCrawler.on('fetchheaders', function(queueItem, responseObject) {
+        siteStatus.updateProcessLinks();
+    });
+
     myCrawler.on('fetchtimeout', function(queueItem, crawlerTimeoutValue) {
         site.fetchTimeout(queueItem, crawlerTimeoutValue);
     });
 
+    myCrawler.on('discoverycomplete', function(queueItem, resources) {
+        console.log('discoverycomplete: ');
+        siteStatus.updateTotalLinks(myCrawler.queue.length);
+    });
+
     myCrawler.on('complete', function() {
-        site.processLinks();
+        site.crawlFinished();
         onComplete(site);
         delete currCrawls[host];
     });

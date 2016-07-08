@@ -151,4 +151,13 @@ router.get("/api/crawler/status", function(req, res) {
 	else res.json({ status: 'idle', crawls: crawler.currCrawls });
 });
 
+router.post('/api/crawler/:host/update/:path', function(req, res) {
+
+	// denied..
+	if(!scheduler.isSiteRegistered(req.params.host)) res.status(404).json({message: 'site is not registered'});
+
+	
+
+});
+
 module.exports = router;

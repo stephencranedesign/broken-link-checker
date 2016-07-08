@@ -21,6 +21,7 @@ var SiteStub = function(site, callback) {
 SiteStub.prototype.fillObj = function() {
     this.brokenLinks = [];
     this.date = new Date().toLocaleString();
+    this.crawlDurationInSeconds = null;
     this.links = [null];
 };
 SiteStub.prototype.startTimer = function() {
