@@ -1,4 +1,4 @@
-### Purpose of App
+1) Purpose of App
     - provide an easy way to 
         - add a site to be automatically monitored for broken links
         - build a site map and submit that site map to google
