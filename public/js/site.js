@@ -60,15 +60,15 @@ var siteInfo = (function($) {
 	listStart.on('click', function() {
 		var url = listInput.val();
 		$.get('/api/sites/find/'+url, function(data) {
-			console.log('done', data);
+			console.log('Site Info: ', data);
 			var brokenLinks = data.brokenLinks.length;
-			list.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><ul>'+buildList(data.brokenLinks)+'</ul></div>');
+			list.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
 		});
 	});
 	buildList = function(list) {
 		var array = [];
 		list.forEach(function(val) {
-			console.log('val: ', val);
+			// console.log('val: ', val);
 			array.push('<li><p>Url: '+val.fileName+'</p> <strong>Status Code: '+val.statusCode+'</strong></li>');
 		});
 

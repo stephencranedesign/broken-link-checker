@@ -6,6 +6,12 @@ var scheduler = require("../custom-modules/scheduler.js");
 var fs = require("fs");
 
 function startCrawl(url, config, callback, errback) {
+
+	// crawling already happening for url
+	if(crawler.isCrawling(url)) {
+		errback({message: "crawling already in process", url});
+	}
+
 	crawler.crawl(url, config, function(site) {
 		if( !scheduler.isSiteRegistered(url) ) {
 			callback({
@@ -153,11 +159,33 @@ router.get("/api/crawler/status", function(req, res) {
 
 router.post('/api/crawler/:host/update/:path', function(req, res) {
 
+	/*
+		What happens two people call update on different urls?
+		- i'll need a queue and a way to know if the site is already checked out for an update. If there are others in the queue, do those changes before pushing back to db.
+	*/
+
+	var host = req.params.host,
+		path = req.params.path;
+
 	// denied..
-	if(!scheduler.isSiteRegistered(req.params.host)) res.status(404).json({message: 'site is not registered'});
+	if(!scheduler.isSiteRegistered(host)) res.status(404).json({message: 'site is not registered'});
 
-	
+	crawler.update(host, path, site, function(updatedSite) {
+		SiteService.save(updatedSite, function(updatedSiteFromDb) {
+			res.json(updatedSiteFromDb);
+		}, function(err) {
+			res.json(err);
+		});
+	});
 
+});
+
+router.get('/api/crawler/explode', function(req, res) {
+	crawler.explode(function(arr) {
+		res.json({message: 'good to go', arr: arr});
+	}, function(err) {
+		res.json(err);
+	});
 });
 
 module.exports = router;

@@ -1,58 +1,17 @@
-1) Purpose of App
-    - provide an easy way to 
-        - add a site to be automatically monitored for broken links
-        - build a site map and submit that site map to google
-        - monitor crawl status
-        - optionally start crawl with button automatically crawl site on set interval.
-        - explore broken links
-            - group by filetype
-            - group by pages
-            
-    - should be able to easily split app onto seperate server for really large sites
-        - would still store info in central database.
-        
+/home
+    - shows all sites registered
 
-2) Domain Modeling
-    a) DB
-        - users
-            - Stephen
-                - username
-                - password
-        - sites 
-            - dummySite1
-                - google credentials for submitting site map..
-                - generated site structure
-                    [
-                        {
-                            "fileType": '...',
-                            "refererUrl":"..."
-                            "url":"...",
-                            statusCode: 'pending'
-                        }
-                    ]
-                    - siteMaps have flat structure. 
-                    - cuts back on redundancies.
-                        - if nested, /about.aspx is in main nav. I dont want to store its status code for every page I hit. I'd rather have it listed once.
-                - brokenLinksCount
-            - dummySite2
-            
-    b) Hub Server
-        - houses database
-        - house client
-        - main server
-            - queue of sites to crawl
-            - endpoints for setting and getting data.
-        
-    c) Optionally create a dedicated server for sites that are really big.
-        - data should still be stored in hub server.
-        
-    d) 
-    
+/post-a-site
+    - ability to registers a site
+    - ability to unregister a site
 
-3) Process
-    - crawl site
-    - store broken links report in database
-    - if no broken links
-        - generate sitemap.xml
-        - ftp sitemap to root of domain.
-        - use google search console api to submit new site map
+/query-a-site
+    - ability to get all info on site.
+
+/api/crawler/status
+    - shows json response of what sites are being crawled and links found / links processed / total percent of site crawled based on those two numbers.
+
+/api/crawler/explode
+    - creates a fakeSite and fills it with a bunch of fakeLinks that deepEqual the objects that are created to represtent the links we gather for the site.
+
+    - I created this to see if I reduced the info I was storing if that'd help. It was interesting tho becuase node didn't have any trouble handling 50,000 links on this object. It got all the way up to 299,500 fakeLinks before it return an error about not being able to json.parse it.  
