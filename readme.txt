@@ -1,3 +1,11 @@
+``` js
+var $S = require('scriptjs')
+
+$S('/foo.js', function () {
+  // foo is ready
+})
+```
+
 1) Purpose of App
     - provide an easy way to 
         - add a site to be automatically monitored for broken links
