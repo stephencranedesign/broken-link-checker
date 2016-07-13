@@ -3,8 +3,8 @@ var mongoose = require('mongoose');
 var SiteSchema = new mongoose.Schema({
     url: { type: String, required: true },
     date: { type: Date, required: true },
-    links: { type: Array, required: true },
-    actualLinks: { type: Array, required: false },
+    // links: { type: Array, required: true },
+    downloadedLinks: { type: Array, required: false },
     brokenLinks: { type: Array, required: false },
     redirectedLinks: { type: Array, required: false },
     fetchTimeouts: { type: Array, required: false },

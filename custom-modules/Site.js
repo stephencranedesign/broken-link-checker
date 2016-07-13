@@ -1,17 +1,30 @@
 var capDecimals = require('./utils.js').capDecimals;
 
+/* 
+    strips info we want from what simple crawler grabs for page.
+*/
+var Resource = function(link) {
+    this.status = link.status
+    this.path = link.path;
+    if(link.referrer) this.referrer = link.referrer; // only need this if present.
+    this.contentType = link.stateData.contentType;
+    if(link.status === "redirected") this.locationFromHeader = link.stateData.headers.location; // only need this if status === 'redirected';
+
+    this.contentLength = link.stateData.contentLength;
+    this.requestLatency = link.stateData.requestLatency;
+    this.requestTime = link.stateData.requestTime;
+};
+
 /*
     Description of the site. this is what we eventually send to Db to save info.
 */
 var Site = function(url, crawlFrequency, crawlOptions) {
     this.url = url;
-    this.uId = 0;
     this.fetchTimeouts = [];
     this.links = [];
     this.redirectedLinks = [];
     this.brokenLinks = [];
-    this.actualLinks = [];
-    this.validLinks = [];
+    this.downloadedLinks = [];
     this.crawlFrequency = crawlFrequency;
     this.crawlOptions = crawlOptions;
     this.crawlType = crawlOptions.crawlType || 'full-site';
@@ -45,18 +58,16 @@ Site.prototype._processLinks = function() {
     this.links.forEach(function(link) {
 
         // broken links
-        if(this._isBrokenLink(link)) this.brokenLinks.push(link);
+        if(this._isBrokenLink(link)) this.brokenLinks.push(new Resource(link));
 
         // redirect links
         else if(link.status === "redirected") {
-            this.redirectedLinks.push(link);
-            this.validLinks.push(link);
+            this.redirectedLinks.push(new Resource(link));
         }
 
         // downloaded links
         else if( link.status === "downloaded" ) {
-            this.actualLinks.push(link);
-            this.validLinks.push(link);
+            this.downloadedLinks.push(new Resource(link));
         }
 
     }.bind(this));

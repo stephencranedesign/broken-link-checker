@@ -10,10 +10,10 @@ function _create(site, callback, errback) {
     Sites.create(
         { 
             url: site.url, 
-            links: site.links, 
+            // links: site.links, 
             date: new Date().toLocaleString(), 
             brokenLinks: site.brokenLinks,
-            actualLinks: site.actualLinks,
+            downloadedLinks: site.downloadedLinks,
             redirectedLinks: site.redirectedLinks,
             fetchTimeouts: site.fetchTimeouts,
             crawlFrequency: site.crawlFrequency,
@@ -41,10 +41,10 @@ module.exports.save = function(site, callback, errback) {
             url: site.url
         }, 
         { 
-            links: site.links, 
+            // links: site.links, 
             date: new Date().toLocaleString(), 
             brokenLinks: site.brokenLinks,
-            actualLinks: site.actualLinks,
+            downloadedLinks: site.downloadedLinks,
             redirectedLinks: site.redirectedLinks,
             fetchTimeouts: site.fetchTimeouts,
             crawlFrequency: site.crawlFrequency,

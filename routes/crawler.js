@@ -181,8 +181,12 @@ router.post('/api/crawler/:host/update/:path', function(req, res) {
 });
 
 router.get('/api/crawler/explode', function(req, res) {
-	crawler.explode(function(arr) {
-		res.json({message: 'good to go', arr: arr});
+	crawler.explode(function(site) {
+		SiteService.save(site, function(doc) {
+			res.json({message: 'good to go', doc: doc});
+		}, function(err) {
+			res.json(err);
+		});
 	}, function(err) {
 		res.json(err);
 	});

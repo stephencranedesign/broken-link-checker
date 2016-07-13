@@ -173,8 +173,24 @@ module.exports.isIdle = isIdle;
 module.exports.update = update;
 
 var FakeSite = function() {
-    this.actualLinks = [];
+    this.url = 'fakesite.com';
+    this.fetchTimeouts = [];
     this.links = [];
+    this.redirectedLinks = [];
+    this.brokenLinks = [];
+    this.actualLinks = [];
+    this.crawlFrequency = 0;
+    this.crawlOptions = {
+        crawlFrequency: 300,
+        initialPath: '/',
+        initialPort: 80,
+        initialProtocol: 'http',
+        interval: 250,
+        maxConcurrency: 1
+    };
+    this.crawlType = 'full-site';
+    this.crawlDurationInSeconds = 0;
+
 };
 FakeSite.prototype.addFakeLink = function(FakeLink) { this.links.push(FakeLink); };
 FakeSite.prototype.process = function() {
@@ -187,33 +203,17 @@ FakeSite.prototype.process = function() {
 };
 
 var FakeLink = function() {
-    this.depth = 1;
-    this.fetched = true;
-    this.host = "cernecalcium.com";
-    this.path = '/';
-    this.port = 90;
-    this.protocol = 'http';
-    this.stateData = {
-        code: 301,
-        contentLength: 151,
-        contentType: "text/html; charset=UTF-8",
-        headers: {
-            connection: "close",
-            contentLength: "151",
-            contentType: "text/html; charset=UTF-8",
-            date: "Mon, 11 Jul 2016 21:57:17 GMT",
-            location: "http://www.cernecalcium.com/",
-            server: "Microsoft-IIS/8.5",
-            "x-powered-by": "ASP.NET"
-        },
-        requestLatency: 121,
-        requestTime: 121
-    };
+    this.status = "redirected";
+    this.path = "/";
+    this.referrer = "http://www.cernecalcium.com/"; // only need this if present.
+    this.contentType = "text/html; charset=UTF-8";
+    this.locationFromHeader = "http://www.cernecalcium.com/"; // only need this if status === 'redirected';
 };
 
 module.exports.explode = function(callback) {
     var Site = new FakeSite;
-    var i = 399500;
+    // var i = 399500;
+    var i = 90000;
     while ( i > 0 ) {
         console.log(i);
         Site.addFakeLink(new FakeLink());
