@@ -14,6 +14,7 @@ var SiteStub = function(site, callback) {
     this.timer = new Timer();
     this.callback = callback || function() {};
     this.killed = false;
+    this.pages = [];
 
     this.fillObj();
     this.startTimer();

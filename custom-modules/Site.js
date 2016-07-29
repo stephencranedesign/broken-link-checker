@@ -76,10 +76,11 @@ Site.prototype._processQueue = function() {
         
         // check if we've processed this link.
         if(processedResources.hasOwnProperty(queueItem.path)) return;
-        array.push(new Resource(this.url, queueItem));
+        var isBroken = this._isBrokenResource(queueItem);
+        array.push(new Resource(this.url, isBroken, queueItem));
 
         // only add to processedResources if it is not a broken link.
-        if(!this._isBrokenResource(queueItem)) processedResources[queueItem.path] = true;
+        if(!isBroken) processedResources[queueItem.path] = true;
     }.bind(this));
 
     console.log("after loop: ", array);

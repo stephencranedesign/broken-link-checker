@@ -64,7 +64,7 @@ module.exports.getBrokenLinks = function(url, callback, errback) {
 	Resources.find({
 	    $and : [
 	        { "_siteUrl": url },
-	        { $or : [ { "info.status": "notfound" }, { "info.status": "failed" } ] }
+	        { "isBroken": true }
 	    ]
 	}, function(err, docs) {
 		console.log('yo man..', url, docs);

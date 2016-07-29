@@ -11,7 +11,9 @@ var SiteSchema = new mongoose.Schema({
 
     crawlOptions: { type: Object, required: false },
     crawlDurationInSeconds: { type: Number, required: false },
-    crawlFrequency: { type: Number, required: true } // should be number of seconds.
+    crawlFrequency: { type: Number, required: true }, // should be number of seconds.
+
+    totalPages: { type: Number, required: false }
 });
 
 var Sites = mongoose.model('Sites', SiteSchema);

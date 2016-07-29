@@ -65,6 +65,21 @@ var siteInfo = (function($) {
 			list.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
 		});
 	});
+
+	/* list site */
+	var brokenLinksInput = $('#brokenLinksInput');
+	var brokenLinksStart = $('#brokenLinksStart');
+	var brokenLinks = $('#brokenLinks');
+
+	brokenLinksStart.on('click', function() {
+		var url = brokenLinksInput.val();
+		$.get('/api/resources/'+url+'/brokenLinks', function(data) {
+			console.log('brokenLinks Info: ', data);
+			var brokenLinks = data.brokenLinks.length;
+			brokenLinks.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
+		});
+	});
+
 	buildList = function(list) {
 		var array = [];
 		list.forEach(function(val) {

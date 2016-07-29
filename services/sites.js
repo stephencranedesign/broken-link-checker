@@ -18,7 +18,8 @@ function _create(site, callback, errback) {
             fetchTimeouts: site.fetchTimeouts.length,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
-            crawlDurationInSeconds: site.crawlDurationInSeconds
+            crawlDurationInSeconds: site.crawlDurationInSeconds,
+            totalPages: site.pages.length
         }, function(err, doc) {
             if (err) {
                 errback(err);
@@ -47,7 +48,8 @@ module.exports.save = function(site, callback, errback) {
             fetchTimeouts: site.fetchTimeouts.length,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
-            crawlDurationInSeconds: site.crawlDurationInSeconds
+            crawlDurationInSeconds: site.crawlDurationInSeconds,
+            totalPages: site.pages.length
         }, function(err, doc) {
             if(err) {
                 errback(err);
