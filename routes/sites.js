@@ -40,4 +40,12 @@ router.get('/api/sites/findBrokenLinks/:name', function(req, res) {
     });
 });
 
+router.get('/api/sites/drop', function(req, res) {
+    Sites.drop(function() {
+        res.json({message: "sites dropped"});
+    }, function(err) {
+        res.status(400).json(err);
+    });
+});
+
 module.exports = router;

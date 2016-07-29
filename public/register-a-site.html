@@ -20,7 +20,7 @@
 		<input type="text" id="port" value="80">
 		<input type="text" id="interval" value="250">
 		<input type="text" id="maxConcurrency" value="1">
-		<input type="text" id="depth" value="1">
+		<input type="text" id="maxDepth" value="0">
 		<input type="text" id="crawlFrequency" value="300">
 
 		<button id="crawlStart">register a site</button>
@@ -30,6 +30,13 @@
 		<h2>Unregister a site</h2>
 		<input type="text" id="deleteInput" value="cernecalcium.com">
 		<button id="deleteStart">unregister site</button>
+
+		<hr>
+
+		<h2>Update a path</h2>
+		<input type="text" id="updateInput" value="cernecalcium.com">
+		<input type="text" id="updateInputPath" value="/contact-us.aspx">
+		<button id="updateStart">update path</button>
 
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>

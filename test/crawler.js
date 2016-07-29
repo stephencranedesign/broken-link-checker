@@ -2,6 +2,11 @@ var chai = require('chai');
 var should = chai.should();
 var crawler = require('../custom-modules/crawler.js');
 var sinon = require('sinon');
+var siteFromDb = require('./test-utils').siteFromDb;
+
+describe('removeLinksForReferrer', function() {
+
+});
 
 // describe('crawler api', function() {
 // 	describe('crawl', function() {

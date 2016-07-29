@@ -3,6 +3,8 @@ var Timer = require('timer.js');
 var SiteService = require("../services/sites.js");
 var loopObj = require('./utils.js').loopObj;
 
+var crawlerCtrl = require("../controllers/crawler-controller");
+
 /* Site Stub */
 var SiteStub = function(site, callback) {
     this.url = site.url;
@@ -19,10 +21,14 @@ var SiteStub = function(site, callback) {
 
 /* allows us to save to db. */
 SiteStub.prototype.fillObj = function() {
-    this.brokenLinks = [];
+    this.brokenResources = [];
     this.date = new Date().toLocaleString();
     this.crawlDurationInSeconds = null;
-    this.links = [null];
+    this.Resources = [null];
+    this.downloadedResources = [null];
+    this.brokenResources = [null];
+    this.redirectedResources = [null];
+    this.fetchTimeouts = [null];
 };
 SiteStub.prototype.startTimer = function() {
     this.timer.start(this.crawlFrequency).on('end', function() {
@@ -47,7 +53,7 @@ var registerSite = function(site, saveToDb, callback, errback) {
         If we already have info for it on the db, we don't want to over-ride that info with the site stub..
     */
 
-    if( !saveToDb ) return callback(site);
+    // if( !saveToDb ) return callback(site);
 
     SiteService.save(site, function(doc) {
         console.log("saved to db from registerSite");
@@ -64,11 +70,10 @@ function unRegisterSite(url, callback, errback) {
         delete registeredSites[url];
     }
     console.log('unRegisterSite: ', url, registeredSites);
-    SiteService.remove(url, function(doc) {
-        callback(doc);
-    }, function(err) {
-        errback(err);
-    });
+    
+    crawlerCtrl.unregisterSite(url, callback, errback);
+
+    // crawlerCtrl.clearPagesAndResourcesForSite();
 };
 
 function isSiteRegistered(url) {
@@ -79,15 +84,7 @@ function isSiteRegistered(url) {
     unregister all registered sites
 */
 function flush(callback, errback) {
-    SiteService.drop(function() {
-        loopObj(registeredSites, function(site) {
-            registeredSites[site.url].stopTimer();
-            delete registeredSites[site.url];
-        });
-        callback();
-    }, function(err) {
-        errback(err);
-    });
+    crawlerCtrl.flush(callback, errback);
 }
 
 module.exports.SiteStub = SiteStub;

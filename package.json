@@ -1,5 +1,5 @@
 {
-  "name": "site-monitor",
+  "name": "broken-link-generator",
   "version": "1.0.0",
   "description": "Small project for generating a site map / checking for broken links.",
   "main": "server.js",
@@ -23,7 +23,7 @@
     "mongoose": "^4.4.17",
     "passport": "^0.3.2",
     "passport-local": "^1.0.0",
-    "request": "^2.72.0",
+    "request": "^2.73.0",
     "simplecrawler": "^0.6.2",
     "timer.js": "^1.0.4",
     "zombie-cors": "^4.2.24"
