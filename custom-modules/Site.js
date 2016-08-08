@@ -149,17 +149,22 @@ Site.prototype._groupByPages = function() {
         // if no referer, then its the entry point and we dont need to worry about that.
         if(!resource.info.hasOwnProperty("referrer")) return;
 
-        var path = resource.info.referrer;
+        // must be a 404 error page and we dont need to worry about that..
+        if(/\/404.aspx?aspxerrorpath=/.test(resource.info.path)) return;
 
+        var fullUrl = resource.info.referrer,
+            path = this._getPathForResource(resource.info.referrer);
+
+        console.log('_groupByPages: ', resource._id);
         // page exists
-        if(pages.hasOwnProperty(path)) {
-            var page = pages[path];
+        if(pages.hasOwnProperty(fullUrl)) {
+            var page = pages[fullUrl];
             page.resources.push(resource._id);
         }
         else { // new page
-            var page = new Page(this.url, path);
+            var page = new Page(this.url, fullUrl, path);
             page.resources.push(resource._id);
-            pages[path] = page;
+            pages[fullUrl] = page;
         }
     }.bind(this));
 
@@ -168,6 +173,9 @@ Site.prototype._groupByPages = function() {
     });
 
     this.pages = array;
+};
+Site.prototype._getPathForResource = function(url) {
+    return url.replace(url.split(':')[0]+'://www.'+this.url, "");
 };
 
 /*

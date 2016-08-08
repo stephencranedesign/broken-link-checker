@@ -3,7 +3,10 @@ var SiteStatus = require('./Site.js').SiteStatus;
 var Resource = require('./Site.js').Resource;
 var loopObj = require('./utils.js').loopObj;
 var SiteService = require("../services/sites.js");
+var PagesService = require("../services/pages.js");
+var ResourcesService = require("../services/resources.js");
 var BrokenLinkCrawler = require('./simple-crawler-extensions.js').BrokenLinkCrawler;
+
 
 var currCrawls = {};
 
@@ -138,34 +141,27 @@ function processNextUpdateInQueue() {
     SiteService.findSite(host, function(siteFromDb) {
         // console.log('update: ', host, path, siteFromDb);
 
-        var freshSite = new Site(host, siteFromDb.crawlFrequency, siteFromDb.crawlOptions);
+        // var freshSite = new Site(host, siteFromDb.crawlFrequency, siteFromDb.crawlOptions);
 
-        var referrerToRemove = siteFromDb.crawlOptions.initialProtocol+ '://www.' +siteFromDb.url+path
-        freshSite.resources = removeLinksForReferrer(siteFromDb, referrerToRemove);
-        console.log('site.resources: ', freshSite.resources.length);
+        // var referrerToRemove = siteFromDb.crawlOptions.initialProtocol+ '://www.' +siteFromDb.url+path
+        // freshSite.resources = removeLinksForReferrer(siteFromDb, referrerToRemove);
+        // console.log('site.resources: ', freshSite.resources.length);
+
+        var resourcesRemoved = -1;
+
+        // nukePage(host, path, function() {
+        //     resourcesRemoved = 1;
+        // }, function() {
+        //     resourcesRemoved = 0;
+        // });
 
         siteFromDb.crawlOptions.maxDepth = 2;
         siteFromDb.crawlOptions.initialPath = path;
         siteFromDb.crawlOptions.crawlType = 'update-page';
 
-        // console.log('config for update: ', siteFromDb.crawlOptions);
-
-        crawl(host, siteFromDb.crawlOptions, function(pageInfo) {
-            // console.log('pageInfo: ', pageInfo);
-
-            pageInfo.flattenLinks();
-            console.log('yo2: ', pageInfo.resources.length);
-            console.log(pageInfo.resources);
-
-            freshSite.resources = freshSite.resources.concat(pageInfo.resources);
-            freshSite.crawlFinished('update-page');
-
-            /* keep values for full site crawl for these */
-            freshSite.date = siteFromDb.date;
-            freshSite.crawlDurationInSeconds = siteFromDb.crawlDurationInSeconds;
-
-            // console.log('boom', freshSite);
-            callback(freshSite);
+        crawl(host, siteFromDb.crawlOptions, function(site) {
+            console.log('site: ', site.pages);
+            callback(site);
             updateComplete();
         }, function(err) {
             errback(err);
@@ -182,29 +178,17 @@ function updateComplete() {
     processNextUpdateInQueue();
 }
 
-function update(host, path, callback, errback) {
+function updatePage(host, path, callback, errback) {
 
-    addUpdateToQueue({ host: host, path: path, callback, errback });
+    addUpdateToQueue({ host: host, path: path, callback: callback, errback: errback });
 
+    /* kill if the site is currently getting a full-site crawl. */
     if(isCrawling(host)) {
         var siteStatus = currCrawls[host];
-        siteStatus.crawlType === 'full-site'
-        return;
+        if(siteStatus.crawlType === 'full-site') return;
     }
 
     processNextUpdateInQueue();
-};
-
-function removeLinksForReferrer(site, path) {
-    var array = [];
-    var links = site.brokenLinks.concat(site.downloadedLinks).concat(site.redirectedLinks);
-    console.log('links length before removing for path: ', links.length);
-    links.forEach(function(resource) {
-        console.log('removeLinksForReferrer', resource.referrer != path, resource.referrer, path);
-        if(resource.referrer != path) array.push(resource)
-    });
-
-    return array;
 };
 
 function isInUpdateQueue(url) {
@@ -227,11 +211,30 @@ function mockCrawler(stub) {
     Crawler = stub;
 };
 
+function nukePage(host, path, callback, errback) {
+
+    // get page
+    PagesService.getPageByPath(host, path, function(doc) {
+
+        // nuke resources.
+        ResourcesService.nukeResources(doc.resources, function() {
+            callback();
+        }, function(err) {
+            errback(err);
+        });
+
+    }, function(err) {
+        errback(err);
+    });
+};
+
+function setUpdatesNeededForPage(site) {
+
+};
+
 module.exports.currCrawls = currCrawls;
 module.exports.isCrawling = isCrawling;
 module.exports.crawl = crawl;
 module.exports.isIdle = isIdle;
-module.exports.update = update;
-
-module.exports.removeLinksForReferrer = removeLinksForReferrer;
+module.exports.updatePage = updatePage;
 

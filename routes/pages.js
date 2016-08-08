@@ -12,6 +12,18 @@ router.get('/api/pages/list', function(req, res) {
     });
 });
 
+router.get("/api/pages/:host/update/:path", function(req, res) {
+
+});
+
+router.post("/api/pages/:host/add/:path", function(req, res) {
+
+});
+
+router.post("/api/pages/:host/delete/:path", function() {
+
+});
+
 router.get('/api/pages/drop', function(req, res) {
     PagesService.drop(function() {
         res.json({message: "pages dropped"});

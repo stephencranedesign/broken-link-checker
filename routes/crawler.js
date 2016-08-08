@@ -170,8 +170,9 @@ router.post("/api/crawler/updatePath", function(req, res) {
 	// denied..
 	if(!scheduler.isSiteRegistered(host)) res.status(404).json({message: 'site is not registered'});
 
-	crawler.updateSite(host, path, function(updatedSite) {
+	crawler.updatePage(host, path, function(updatedSite) {
 		console.log('update ready to save to db', updatedSite);
+		return;
 		SitesService.save(updatedSite, function(updatedSiteFromDb) {
 			console.log('update saved');
 			res.json(updatedSiteFromDb);

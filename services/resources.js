@@ -76,3 +76,20 @@ module.exports.getBrokenLinks = function(url, callback, errback) {
 		callback(docs);
 	});
 };
+
+module.exports.nukeResourcesForPage = function(array, callback, errback) {
+	var query = ["$or:["];
+	array.forEach(function(id) {
+		query.push("{_id:"+id+"},");
+	});
+	query.push("]");
+
+	Resources.find().remove(query.join(""), function(err, doc) {
+		if(err) {
+			errback(err);
+			return;
+		}
+
+		callback(doc);
+	});
+};

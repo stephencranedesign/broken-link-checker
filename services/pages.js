@@ -49,6 +49,19 @@ module.exports.remove = function(query, callback, errback) {
 	});
 };
 
+module.exports.getPageByPath = function(url, path, callback, errback) {
+	console.log("nukePage");
+	
+	var query = {
+	    $and : [
+	        { "_siteUrl": url },
+	        { "path": path }
+	    ]
+	};
+
+	module.exports.remove(query, callback, errback);
+};
+
 module.exports.drop = function(callback, errback) {
     mongoose.connection.collections['pages'].drop( function(err) {
         if(err) {
