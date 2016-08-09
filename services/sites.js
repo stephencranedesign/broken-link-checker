@@ -1,5 +1,5 @@
 var Sites = require('../models/Sites.js');
-var mongoose = require('mongoose');
+var mongoose = require('mongoose'); // for drop function
 
 function _normalizeUrl(url) {
     // regex to normalize entries somehow?
@@ -10,15 +10,16 @@ function _create(site, callback, errback) {
     Sites.create(
         { 
             url: site.url, 
-            // links: site.links, 
+            // Resources: site.Resources, 
             date: new Date().toLocaleString(), 
-            brokenLinks: site.brokenLinks,
-            downloadedLinks: site.downloadedLinks,
-            redirectedLinks: site.redirectedLinks,
-            fetchTimeouts: site.fetchTimeouts,
+            brokenResources: site.brokenResources.length,
+            downloadedResources: site.downloadedResources.length,
+            redirectedResources: site.redirectedResources.length,
+            fetchTimeouts: site.fetchTimeouts.length,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
-            crawlDurationInSeconds: site.crawlDurationInSeconds
+            crawlDurationInSeconds: site.crawlDurationInSeconds,
+            totalPages: site.pages.length
         }, function(err, doc) {
             if (err) {
                 errback(err);
@@ -34,19 +35,47 @@ function _create(site, callback, errback) {
 
 module.exports.save = function(site, callback, errback) {
     site.url = _normalizeUrl(site.url);
-    // console.log('save', site, '***********');
-    // console.log('brokenLinks: ', site.brokenLinks);
     Sites.findOneAndUpdate(
         {
             url: site.url
         }, 
         { 
-            // links: site.links, 
+            // Resources: site.Resources, 
             date: new Date().toLocaleString(), 
-            brokenLinks: site.brokenLinks,
-            downloadedLinks: site.downloadedLinks,
-            redirectedLinks: site.redirectedLinks,
-            fetchTimeouts: site.fetchTimeouts,
+            brokenResources: site.brokenResources.length,
+            downloadedResources: site.downloadedResources.length,
+            redirectedResources: site.redirectedResources.length,
+            fetchTimeouts: site.fetchTimeouts.length,
+            crawlFrequency: site.crawlFrequency,
+            crawlOptions: site.crawlOptions,
+            crawlDurationInSeconds: site.crawlDurationInSeconds,
+            totalPages: site.pages.length
+        }, function(err, doc) {
+            if(err) {
+                errback(err);
+                return;
+            }
+
+            if(doc === null) _create(site, callback, errback);
+            else callback(doc);
+            // else mongoose.disconnect();
+        }
+    );
+};
+
+module.exports.updateLinkCount = function(site, callback, errback) {
+    site.url = _normalizeUrl(site.url);
+    Sites.findOneAndUpdate(
+        {
+            url: site.url
+        }, 
+        { 
+            // Resources: site.Resources, 
+            date: new Date().toLocaleString(), 
+            brokenResources: site.brokenResources.length,
+            downloadedResources: site.downloadedResources.length,
+            redirectedResources: site.redirectedResources.length,
+            fetchTimeouts: site.fetchTimeouts.length,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds
@@ -65,7 +94,7 @@ module.exports.save = function(site, callback, errback) {
 
 module.exports.findLinksForSite = function(url, callback, errback) {
     url = _normalizeUrl(url);
-    Sites.findOne({url: url}, 'url date links').lean().exec(function(err, doc) {
+    Sites.findOne({url: url}, 'url date downloadedLinks redirectedLinks').lean().exec(function(err, doc) {
         if(err) {
             errback(err);
             return;
@@ -120,7 +149,6 @@ module.exports.remove = function(path, callback, errback) {
             }
 
             callback(item);
-            // mongoose.disconnect();
         });
     }
     else {
@@ -131,7 +159,6 @@ module.exports.remove = function(path, callback, errback) {
             }
 
             callback(item);
-            // mongoose.disconnect();
         });
     }
 };

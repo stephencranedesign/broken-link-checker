@@ -42,12 +42,12 @@ var siteInfo = (function($) {
 	var port = $('#port');
 	var interval = $('#interval');
 	var concurrency = $('#maxConcurrency');
-	var depth = $('#depth');
+	var maxDepth = $('#maxDepth');
 	var crawlFrequency = $('#crawlFrequency');
 
 	crawlStart.on('click', function() {
 		var url = crawlInput.val();
-		$.post('/api/crawler/'+url+'/register', { initialProtocol: protocol.val(), initialPath: path.val(), initialPort: port.val(), interval: interval.val(), maxConcurrency: concurrency.val(), crawlFrequency: crawlFrequency.val() }, function(data) {
+		$.post('/api/crawler/'+url+'/register', { initialProtocol: protocol.val(), initialPath: path.val(), initialPort: port.val(), interval: interval.val(), maxConcurrency: concurrency.val(), crawlFrequency: crawlFrequency.val(), maxDepth: maxDepth.val() }, function(data) {
 			console.log('crawl finished');
 		}, 'application/x-www-form-urlencoded');
 	});
@@ -65,6 +65,21 @@ var siteInfo = (function($) {
 			list.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
 		});
 	});
+
+	/* list site */
+	var brokenLinksInput = $('#brokenLinksInput');
+	var brokenLinksStart = $('#brokenLinksStart');
+	var brokenLinks = $('#brokenLinks');
+
+	brokenLinksStart.on('click', function() {
+		var url = brokenLinksInput.val();
+		$.get('/api/resources/'+url+'/brokenLinks', function(data) {
+			console.log('brokenLinks Info: ', data);
+			var brokenLinks = data.brokenLinks.length;
+			brokenLinks.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
+		});
+	});
+
 	buildList = function(list) {
 		var array = [];
 		list.forEach(function(val) {
@@ -87,21 +102,49 @@ var siteInfo = (function($) {
 		});
 	});
 
-	/* create user */
-	var createUser = $('#createUser');
-	var username = $('#username');
-	var password = $('#password');
+	/* update a path on site */
+	var updateInput = $('#updateInput');
+	var updateInputPath = $('#updateInputPath');
+	var updateStart = $('#updateStart');
 
-	createUser.on('click', function() {
-		$.post('/api/users/create', { username: username.val(), password: password.val() }, function(data) {
-			console.log('user created: ', data);	
+	updateStart.on('click', function() {
+		var host = updateInput.val();
+		var path = updateInputPath.val();
+		console.log('hi', host, path);
+		$.post('/api/crawler/updatePath', { host: host, path: path }, function(data) {
+			console.log('crawl finished');
 		}, 'application/x-www-form-urlencoded');
 	});
 
-	var listUsers = $('#listUsers');
-	listUsers.on('click', function() {
-		$.get('/api/users/list', function(data) {
-			console.log('data: ', data);
+	/* pages */
+	var pagesInput = $('#pages-input'),
+		pagesButton = $('#pages-button');
+
+	pagesButton.on('click', function() {
+		$.get("/api/pages/list", function(data) {
+			console.log("pages data: ", data);
+			// var pages = [];
+			// var ul = $('#pages');
+			// data.forEach(function(o) {
+			// 	pages.push("<li>"+o.url+"</li>")
+			// });
+			// ul.html(pages.join(''));
+		});
+	});
+
+	/* resources */
+	var resourcesInput = $('#resources-input'),
+		resourcesButton = $('#resources-button');
+
+	resourcesButton.on('click', function() {
+		$.get("/api/resources/list", function(data) {
+			console.log("resources data: ", data);
+			// var resources = [];
+			// var ul = $('#resources');
+			// data.forEach(function(o) {
+			// 	resources.push("<li>"+o.url+"</li>")
+			// });
+			// ul.html(resources.join(''));
 		});
 	});
 

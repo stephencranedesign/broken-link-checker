@@ -9,7 +9,6 @@ var BrokenLinkCrawler = require('./simple-crawler-extensions.js').BrokenLinkCraw
 
 var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
 
-
 var currCrawls = {};
 
 
@@ -142,8 +141,6 @@ function processNextUpdateInQueue() {
 
     SiteService.findSite(host, function(siteFromDb) {
 
-
-
         var resourcesRemoved = -1;
 
         nukePage(host, path, function() {
@@ -168,7 +165,6 @@ function processNextUpdateInQueue() {
                     updateComplete();
                 }
             });
-
         }, function(err) {
             errback(err);
         });
@@ -226,11 +222,8 @@ function nukePage(host, path, callback, errback) {
 
     // get page
     PagesService.getPageByPath(host, path, function(doc) {
-
-        console.log('page: ', doc);
-
         // nuke resources.
-        ResourcesService.nukeResourcesForPage(doc.resources, function() {
+        ResourcesService.nukeResources(doc.resources, function() {
             callback();
         }, function(err) {
             errback(err);

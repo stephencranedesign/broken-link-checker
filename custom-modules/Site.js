@@ -1,36 +1,30 @@
 var capDecimals = require('./utils.js').capDecimals;
-
-/* 
-    strips info we want from what simple crawler grabs for page.
-*/
-var Resource = function(link) {
-    this.status = link.status
-    this.path = link.path;
-    if(link.referrer) this.referrer = link.referrer; // only need this if present.
-    this.contentType = link.stateData.contentType;
-    if(link.status === "redirected") this.locationFromHeader = link.stateData.headers.location; // only need this if status === 'redirected';
-
-    this.contentLength = link.stateData.contentLength;
-    this.requestLatency = link.stateData.requestLatency;
-    this.requestTime = link.stateData.requestTime;
-};
+var loopObj = require('./utils.js').loopObj;
+var Page = require('./Page');
+var Resource = require('./Resource');
+var ObjectID = require('mongodb').ObjectID;
+var registeredSites = require('./scheduler.js').registeredSites;
 
 /*
     Description of the site. this is what we eventually send to Db to save info.
 */
 var Site = function(url, crawlFrequency, crawlOptions) {
     this.url = url;
+
     this.fetchTimeouts = [];
-    this.links = [];
-    this.redirectedLinks = [];
-    this.brokenLinks = [];
-    this.downloadedLinks = [];
+    this.resources = [];
+    this.queue = [];
+    this.redirectedResources = [];
+    this.brokenResources = [];
+    this.downloadedResources = [];
+
     this.crawlFrequency = crawlFrequency;
     this.crawlOptions = crawlOptions;
-    this.crawlType = crawlOptions.crawlType || 'full-site';
+    this.processedGoodResources = {};
+    this.crawlType = crawlOptions.hasOwnProperty('crawlType') ?  crawlOptions.crawlType : 'full-site';
 };
 Site.prototype.fetchStart = function(queueItem) { 
-    this.links.push(queueItem);
+    this.queue.push(queueItem);
 };
 Site.prototype.fetchTimeout = function(queueItem) {
     this.fetchTimeouts.push(queueItem);
@@ -39,59 +33,170 @@ Site.prototype.crawlStarted = function() {
     if(this.crawlType === 'page-update') return;
     this.crawlStartTime = Date.now();
 };
-Site.prototype.crawlFinished = function(dontProcessTime) {
-    this._processLinks();
-    if(this.crawlType === 'page-update' || dontProcessTime) return;
+Site.prototype.crawlFinished = function(type) {
+    if(type != undefined) this.crawlType = type;
+    this._processQueue();
+    this._processResources();
+    this._groupByPages();
+    this.processedGoodResources = null; // free some space.
+    if(this.crawlType === 'page-update') return;
     this.crawlEndTime = Date.now();
     this.crawlDurationInSeconds = capDecimals((this.crawlEndTime - this.crawlStartTime) / 1000, 2);
 };
-Site.prototype._isBrokenLink = function(link) {
-    var brokenLink = false;
-    if(link.status === "notfound" || link.status === "failed") brokenLink = true;
 
-    // 404 error page
-    else if(link.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(link.stateData.headers.location)) brokenLink = true;
+/*
+    look at resource/stateData to determine if the resource is broken.
+*/ 
+Site.prototype._isBrokenResource = function(resource) {
+    var brokenResource = false;
+    if(resource.status === "notfound" || resource.status === "failed") brokenResource = true;
 
-    return brokenLink;
+    console.log('crawlType: ', this.crawlType);
+    if( this.crawlType === "full-site" ) {
+        // 404 error page
+        if(resource.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(resource.stateData.headers.location)) brokenResource = true;
+    }
+    else {
+        // 404 error page
+        if(resource.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(resource.locationFromHeader)) brokenResource = true;
+    }
+
+    return brokenResource;
 };
-Site.prototype._processLinks = function() {
-    this.links.forEach(function(link) {
 
-        // broken links
-        if(this._isBrokenLink(link)) this.brokenLinks.push(new Resource(link));
+/*
+    weed out duplicate good links in queue and assign it to resources array.
+*/
+Site.prototype._processQueue = function() {
+    var processedResources = {};
+    var array = [];
+    this.queue.forEach(function(queueItem) {
 
-        // redirect links
-        else if(link.status === "redirected") {
-            this.redirectedLinks.push(new Resource(link));
-        }
+        console.log("processQueue in Loop: ", queueItem.path, " | ",processedResources.hasOwnProperty(queueItem.path), " | ", !this._isBrokenResource(queueItem) , " | ", queueItem.status);
+        
+        // check if we've processed this link.
+        if(processedResources.hasOwnProperty(queueItem.path)) return;
+        var isBroken = this._isBrokenResource(queueItem);
+        array.push(new Resource(this.url, isBroken, queueItem));
 
-        // downloaded links
-        else if( link.status === "downloaded" ) {
-            this.downloadedLinks.push(new Resource(link));
-        }
+        // only add to processedResources if it is not a broken link.
+        if(!isBroken) processedResources[queueItem.path] = true;
+    }.bind(this));
+
+    console.log("after loop: ", array);
+
+    this.queue = []; // attempt to free some space for massive sites.
+    this.resources = array;
+};
+
+/*
+    look through resources and assign each to one these arrays of:
+        - brokenResources
+        - redirectedResources
+        - downloadedResources
+*/
+Site.prototype._processResources = function() {
+    console.log('crawlType from _processResources: ', this.crawlType);
+    this.resources.forEach(function(resource) {
+        console.log("resource: ", resource);
+        // if(this.crawlType === 'full-site') {
+
+            // broken Resources
+            if(this._isBrokenResource(resource.info)) this.brokenResources.push(resource);
+
+            // redirect Resources
+            else if(resource.info.status === "redirected") {
+                if(this.alreadyProcessed(resource.info.url)) return;
+                this.redirectedResources.push(resource);
+            }
+
+            // downloaded Resources
+            else if( resource.info.status === "downloaded" ) {
+                if(this.alreadyProcessed(resource.info.url)) return;
+                this.downloadedResources.push(resource);
+            }
+        // }
+        // else {
+        //      // broken Resources
+        //     if(this._isBrokenResource(resource.info)) this.brokenResources.push(resource);
+
+        //     // redirect Resources
+        //     else if(resource.info.status === "redirected") {
+        //         this.redirectedResources.push(resource);
+        //     }
+
+        //     // downloaded Resources
+        //     else if( resource.info.status === "downloaded" ) {
+        //         this.downloadedResources.push(resource);
+        //     }
+        // }
 
     }.bind(this));
+};
+Site.prototype.alreadyProcessed = function(url) {
+    if(this.processedGoodResources[url]) return true;
+    this.processedGoodResources[url] = true;
+    return false;
+};
+
+/*
+    create a pages object and sort through all resources to assign to a specific page.
+*/
+Site.prototype._groupByPages = function() {
+    var pages = {}, array = [];
+    this.resources.forEach(function(resource) {
+
+        // if no referer, then its the entry point and we dont need to worry about that.
+        if(!resource.info.hasOwnProperty("referrer")) return;
+
+        // must be a 404 error page and we dont need to worry about that..
+        if(/\/404.aspx?aspxerrorpath=/.test(resource.info.path)) return;
+
+        var fullUrl = resource.info.referrer,
+            path = this._getPathForResource(resource.info.referrer);
+
+        console.log('_groupByPages: ', resource._id);
+        // page exists
+        if(pages.hasOwnProperty(fullUrl)) {
+            var page = pages[fullUrl];
+            page.resources.push(resource._id);
+        }
+        else { // new page
+            var page = new Page(this.url, fullUrl, path);
+            page.resources.push(resource._id);
+            pages[fullUrl] = page;
+        }
+    }.bind(this));
+
+    loopObj(pages, function(key, val) {
+        array.push(val);
+    });
+
+    this.pages = array;
+};
+Site.prototype._getPathForResource = function(url) {
+    return url.replace(url.split(':')[0]+'://www.'+this.url, "");
 };
 
 /*
     Snap shot of site crawling progress. Stored on server and given to client when status is requested.
 */
 var SiteStatus = function(crawlType) {
-    this.totalLinks = 0;
-    this.processedLinks = 0;
+    this.totalResources = 0;
+    this.processedResources = 0;
     this.percentComplete = 0;
     this.crawlType = crawlType || 'full-site';
 };
-SiteStatus.prototype.updateProcessLinks = function() { 
-    this.processedLinks++; 
+SiteStatus.prototype.updateProcessResources = function() { 
+    this.processedResources++; 
     this.updatePercentComplete(); 
 };
-SiteStatus.prototype.updateTotalLinks = function(length) { 
-    this.totalLinks = length; 
+SiteStatus.prototype.updateTotalResources = function(length) { 
+    this.totalResources = length; 
     this.updatePercentComplete(); 
 };
 SiteStatus.prototype.updatePercentComplete = function() { 
-    this.percentComplete = capDecimals(this.processedLinks/this.totalLinks, 2); 
+    this.percentComplete = capDecimals(this.processedResources/this.totalResources, 2); 
 };
 
 module.exports.Site = Site;

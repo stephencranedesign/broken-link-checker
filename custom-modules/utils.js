@@ -1,28 +1,30 @@
 /* recursive check */
-module.exports.recursiveCheck = function(name, val, callback, delay, max) {
-	name = name || 'anonymous';
+module.exports.recursiveCheck = function(val, delay, max) {
 	delay = delay || 50;
 	max = max || 100;
 
-	var index = 0,
-		check = function check(val, callback, delay, max) {
+	return new Promise(function(fulfill, reject) {
+		var index = 0,
+		check = function check(val, delay, max) {
 			setTimeout(function() {
-				var valHolder = ( typeof val == 'function' ) ? val() : val;
+				var valHolder = ( typeof val === 'function' ) ? val() : val;
+				console.log("check", valHolder);
 				index++;
-				if( valHolder || index > max ) { index = 0; if( callback ) callback(); return }
-				else if ( valHolder == 'kill' ) return;
-				else check(val, callback, delay, max); 
+				if( valHolder || index > max ) { fulfill(); return }
+				else if ( valHolder == 'kill' ) reject();
+				else check(val, delay, max); 
 			}, delay);
 		};
-	
-	check(val, callback, delay, max);
+
+		check(val, delay, max);
+	});
 };
 
 module.exports.loopObj = function (obj, func) {
     for (var prop in obj) {
         // skip loop if the property is from prototype
         if(!obj.hasOwnProperty(prop)) continue;
-        func(obj[prop]);
+        func(prop, obj[prop]);
     }
 }
 

@@ -1,0 +1,6 @@
+1) come up with a way to search and remove links from queue that are not broken when we receive info back from header to tell us if a link is good or broken. If it is good, it doesn't matter where it is on the site so we can make a blacklist of sites to not add to the queue and a way to purge earlier enteries of it.
+
+	- this could actually be a big performance help on unitypoint-like sites.
+
+2) progressively save info to db as you receive info instead of all at once at end..
+	- not sure if this would work cause I need to wait for stuff to process..
