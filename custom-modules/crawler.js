@@ -1,16 +1,35 @@
-var Crawler = require('simplecrawler');
-var cheerio = require('cheerio');
 var Site = require('./Site.js').Site;
 var SiteStatus = require('./Site.js').SiteStatus;
+var Resource = require('./Site.js').Resource;
 var loopObj = require('./utils.js').loopObj;
 var SiteService = require("../services/sites.js");
+var PagesService = require("../services/pages.js");
+var ResourcesService = require("../services/resources.js");
+var BrokenLinkCrawler = require('./simple-crawler-extensions.js').BrokenLinkCrawler;
+
+var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
+
 
 var currCrawls = {};
+
+
+function makeCrawler(host, config) {
+    var crawler = new BrokenLinkCrawler({host: host, uniqueUrlsOnly: false });
+
+    crawler.initialProtocol = config.initialProtocol || 'http';
+    crawler.initialPath = config.initialPath || '/';
+    crawler.initialPort = parseInt(config.initialPort) || 20;
+    crawler.interval = parseInt(config.interval) || 250;
+    crawler.maxConcurrency = parseInt(config.maxConcurrency) || 1;
+    crawler.maxDepth = parseInt(config.maxDepth);
+
+    return crawler;
+};
 
 function crawl(host, config, onComplete) {
 
     var host = host;
-    var myCrawler = new Crawler(host);
+    var myCrawler = makeCrawler(host, config);
     var crawlFrequency = config.crawlFrequency || 10080; // 7 days.
 
     var site = new Site(host, crawlFrequency, config); 
@@ -18,28 +37,28 @@ function crawl(host, config, onComplete) {
 
     currCrawls[host] = siteStatus;
 
-    myCrawler.discoverResources = discoverResources;
-
-    myCrawler.initialProtocol = config.initialProtocol || 'http';
-    myCrawler.initialPath = config.initialPath || '/';
-    myCrawler.initialPort = parseInt(config.initialPort) || 20;
-    myCrawler.interval = parseInt(config.interval) || 250;
-    myCrawler.maxConcurrency = parseInt(config.maxConcurrency) || 1;
-    if(config.maxDepth) myCrawler.maxDepth = config.maxDepth;
-
-    var site;
-
     myCrawler.on('crawlstart', function() { 
         site.crawlStarted();
         console.log('start'); 
     });
+
+    myCrawler.addFetchCondition(function(parsedURL, queueItem) {
+        console.log('addFetchCondition: ', this.goodResources.hasOwnProperty(parsedURL.path));
+
+        // get the link if it is not already added to the goodResources object.
+        if(!this.goodResources.hasOwnProperty(parsedURL.path)) return true;
+
+        // if it is on the object, call shouldFetch to see if it is a redirect or a downloaded.
+        return this.goodResources[parsedURL.path].shouldFetch();
+    }.bind(myCrawler));
 
     myCrawler.on('fetchstart', function(queueItem, requestOptions) {
         site.fetchStart(queueItem);
     });
 
     myCrawler.on('fetchheaders', function(queueItem, responseObject) {
-        siteStatus.updateProcessLinks();
+        siteStatus.updateProcessResources();
+        myCrawler.processHeader(responseObject);
     });
 
     myCrawler.on('fetchtimeout', function(queueItem, crawlerTimeoutValue) {
@@ -47,12 +66,12 @@ function crawl(host, config, onComplete) {
     });
 
     myCrawler.on('discoverycomplete', function(queueItem, resources) {
-        console.log('discoverycomplete: ');
-        siteStatus.updateTotalLinks(myCrawler.queue.length);
+        siteStatus.updateTotalResources(myCrawler.queue.length);
     });
 
     myCrawler.on('complete', function() {
         site.crawlFinished();
+        if(isInUpdateQueue(site.url)) removeFromUpdateQueue(site);
         onComplete(site);
         delete currCrawls[host];
     });
@@ -60,37 +79,29 @@ function crawl(host, config, onComplete) {
     myCrawler.start();
 };
 
-function discoverResources(buffer, queueItem) {
-    var $ = cheerio.load(buffer.toString("utf8"));
+/*
+    if a good link is found. we dont care where it comes from on the site so we can ignore it and not add it to the queue for the rest of the crawl.
+*/
 
-    var resources = [];
- 
-    /* page links */
-    $("a[href]").map(function () {
-        var href = $(this).attr('href');
+function processHeader() {
+    var crawler = this;
+    return function(responseObject) {
+        console.log('*****');
+        console.log('responseObject: ', responseObject);
 
-        /* has a hash -> shouldn't have to worry about a hash url and it causes an error */
-        if(/#/.test(href)) return;
+        // was an error.
+        if(responseObject.statusCode > 399) return;
 
-        resources.push(href);
-    }).get();
+        // is a redirect
+        else if(responseObject.statusCode > 299 && responseObject.statusCode < 400) {
+            // redirecting to error page..
+            if(/\/404\.aspx\?aspxerrorpath=\//.test(responseObject.headers.location)) return;
+            crawler.goodLinkFound(responseObject);
+        }
 
-    /* imgs */
-    $("img[src]").map(function () {
-        resources.push($(this).attr("src"));
-    }).get();
-
-    /* scripts */
-    $("scripts[href]").map(function () {
-        resources.push($(this).attr("href"));
-    }).get();
-
-    /* styles */
-    $("link[rel='stylesheet']").map(function () {
-        resources.push($(this).attr("href"));
-    }).get();
-
-    return resources;
+        // successfully downloaded
+        else if(responseObject.statusCode > 199 && responseObject.statusCode < 300) crawler.goodLinkFound(responseObject);
+    };
 };
 
 function isCrawling(url) {
@@ -117,111 +128,126 @@ function isIdle() {
     not sure if we can make this work so that anyone can call this endpoint but not the register/unregister endpoints..
 */
 var updateQueue = [];
-var currUpdates = {};
-function isUpdating(host) { return currUpdates.hasOwnProperty(host) ? true : false; };
 function addUpdateToQueue(obj) {
     updateQueue.push(obj);
 };
 
-function update(host, path, site, callback, errback) {
-    addUpdateToQueue({ host: host, path: path });
+function processNextUpdateInQueue() {
 
-    if(isUpdating(host)) return;
-    else {
-        currUpdates[host] = true;
-        processUpdateQueue()
-    }
-    SiteService.findSite(host, function(site) {
-        console.log('update: ', host, path, site);
+    var update = updateQueue[0],
+        host = update.host,
+        path = update.path,
+        callback = update.callback,
+        errback = update.errback;
 
-        site.links = removeLinksForPath(site.links, path);
-        console.log('site.links: ', site.links);
+    SiteService.findSite(host, function(siteFromDb) {
 
-        crawl(host, { maxDepth: 1, initialPath: path }, function(pageInfo) {
-            console.log('pageInfo: ', pageInfo);
 
-            site.links = site.links.concat(pageInfo.links);
 
-            var dontProcessTime = true;
-            site.crawlFinished(dontProcessTime);
+        var resourcesRemoved = -1;
 
-            callback(site);
+        nukePage(host, path, function() {
+            resourcesRemoved = 1;
+        }, function() {
+            resourcesRemoved = 0;
+        });
+
+        siteFromDb.crawlOptions.maxDepth = 2;
+        siteFromDb.crawlOptions.initialPath = path;
+        siteFromDb.crawlOptions.crawlType = 'update-page';
+
+        crawl(host, siteFromDb.crawlOptions, function(site) {
+            console.log('site: ', site.pages);
+
+            recursiveCheck(function() {
+                return resourcesRemoved != -1 ? true : false;
+            }).then(function() {
+                if(!resourcesRemoved) throw new Error("error nuking resources");
+                else {
+                    callback(site);
+                    updateComplete();
+                }
+            });
+
         }, function(err) {
             errback(err);
         });
     }, function(err) {
-        res.json({ message: 'site not found', err: err })
+        errback(err);
     });
 };
 
-function removeLinksForPath(links, path) {
-    var array = [];
-    links.forEach(function(resource) {
-        if(resource.referrer != resource.host + path) array.push(resource)
-    });
-    return array;
+function updateComplete() {
+    // remove first item.
+    updateQueue.shift();
+    if(!updateQueue.length) return;
+    processNextUpdateInQueue();
+}
+
+function updatePage(host, path, callback, errback) {
+
+    addUpdateToQueue({ host: host, path: path, callback: callback, errback: errback });
+
+    /* 
+        kill if the site is currently getting a full-site crawl. 
+            - will this update run once full-site crawl complete? 
+            - do i really want this?
+                - unitypoint takes a day to run.. I think i'd want to run the updatePage even if the full site is being crawled.
+    */
+    if(isCrawling(host)) {
+        var siteStatus = currCrawls[host];
+        if(siteStatus.crawlType === 'full-site') return;
+    }
+
+    processNextUpdateInQueue();
 };
+
+function isInUpdateQueue(url) {
+    if(!updateQueue.length) return false;
+
+    var index = -1;
+    // is this site in the update queue?
+    updateQueue.forEach(function(siteFromUpdateQueue, i) {
+        if(siteFromUpdateQueue.host === url) index = 1;
+    });
+
+    return index;
+};
+function removeFromUpdateQueue(index) {
+    // remove from update queue.
+    if(index != -1) updateQueue.splice(index, 1);
+}
 
 function mockCrawler(stub) {
     Crawler = stub;
+};
+
+function nukePage(host, path, callback, errback) {
+
+    // get page
+    PagesService.getPageByPath(host, path, function(doc) {
+
+        console.log('page: ', doc);
+
+        // nuke resources.
+        ResourcesService.nukeResourcesForPage(doc.resources, function() {
+            callback();
+        }, function(err) {
+            errback(err);
+        });
+
+    }, function(err) {
+        errback(err);
+    });
+};
+
+function setUpdatesNeededForPage(site) {
+
 };
 
 module.exports.currCrawls = currCrawls;
 module.exports.isCrawling = isCrawling;
 module.exports.crawl = crawl;
 module.exports.isIdle = isIdle;
-module.exports.update = update;
+module.exports.updatePage = updatePage;
 
-var FakeSite = function() {
-    this.url = 'fakesite.com';
-    this.fetchTimeouts = [];
-    this.links = [];
-    this.redirectedLinks = [];
-    this.brokenLinks = [];
-    this.actualLinks = [];
-    this.crawlFrequency = 0;
-    this.crawlOptions = {
-        crawlFrequency: 300,
-        initialPath: '/',
-        initialPort: 80,
-        initialProtocol: 'http',
-        interval: 250,
-        maxConcurrency: 1
-    };
-    this.crawlType = 'full-site';
-    this.crawlDurationInSeconds = 0;
-
-};
-FakeSite.prototype.addFakeLink = function(FakeLink) { this.links.push(FakeLink); };
-FakeSite.prototype.process = function() {
-    this.links.forEach(function(link) {
-        this.actualLinks.push(link);
-    }.bind(this));
-
-    this.brokenLinks = [new FakeLink(), new FakeLink(), new FakeLink(), new FakeLink()];
-    this.redirectLinks = [new FakeLink(), new FakeLink(), new FakeLink(), new FakeLink()];
-};
-
-var FakeLink = function() {
-    this.status = "redirected";
-    this.path = "/";
-    this.referrer = "http://www.cernecalcium.com/"; // only need this if present.
-    this.contentType = "text/html; charset=UTF-8";
-    this.locationFromHeader = "http://www.cernecalcium.com/"; // only need this if status === 'redirected';
-};
-
-module.exports.explode = function(callback) {
-    var Site = new FakeSite;
-    // var i = 399500;
-    var i = 90000;
-    while ( i > 0 ) {
-        console.log(i);
-        Site.addFakeLink(new FakeLink());
-        i--;
-    };
-    Site.process();
-    callback(Site);
-};
-
-/* for tests */
-module.exports.mockCrawler = mockCrawler;
