@@ -3,6 +3,7 @@ var should = chai.should();
 var crawler = require('../custom-modules/crawler.js');
 var sinon = require('sinon');
 var siteFromDb = require('./test-utils').siteFromDb;
+var flushDb = require("./test-utils.js").flushDb;
 
 describe('removeLinksForReferrer', function() {
 

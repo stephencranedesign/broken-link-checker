@@ -9,6 +9,8 @@ var crawlerRoutes = require('./routes/crawler');
 var pagesRoutes = require('./routes/pages');
 var resourcesRoutes = require('./routes/resources');
 
+var port = process.env.PORT || 8080;
+
 var app = express();
 app.use(express.static('public'));
 
@@ -33,8 +35,8 @@ app.use('*', function(req, res) {
     res.status(404).json({ message: 'Not Found' });
 });
 
-app.listen(8080, function() {
-    console.log('Listening on port 8080');
+app.listen(port, function() {
+    console.log('Listening on port '+port);
 });
 
 exports.app = app;

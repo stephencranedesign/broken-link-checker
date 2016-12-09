@@ -41,8 +41,8 @@ class BrokenLinkQueue extends FetchQueue {
 */
 class BrokenLinkCrawler extends Crawler {
     constructor(config) {
-        console.log('BrokenLinkCrawler');
-        super(config.host);
+        var host = 'www.'+config.host.replace('www.', '');
+        super(host);
         this.pagesCrawled = {};
         this.goodResources = {};
         this.setUniqueUrlsForQueue(config.uniqueUrlsOnly);
@@ -131,7 +131,7 @@ class BrokenLinkCrawler extends Crawler {
     }
 
     shouldAddResource(url, elmTag) {
-        console.log('shouldAddResource: ', url, ' | ', this.goodResources[url], ' | ', elmTag);
+        console.log('shouldAddResource: ', url, ' | ', this.goodResources[url], ' | ', '<',elmTag,'>');
         /* has a hash -> shouldn't have to worry about a hash url and it causes an error */
         if(elmTag === 'a' && /#/.test(url)) return false;
         if(this.goodResources[url]) return false;

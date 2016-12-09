@@ -19,17 +19,27 @@ module.exports.insertMany = function(resources, callback, errback) {
 	});
 	Resources.insertMany(resources, function(err, docs) {
 		if(err) {
-			errback(err);
+			if(errback) errback(err);
 			return;
 		}
 
 		console.log("Resources | insertMany");
-		callback(docs);
+		 if(callback) callback(docs);
 	});
 };
 
 module.exports.list = function(callback, errback) {
 	Resources.find(function(err, items) {
+        if (err) {
+            errback(err);
+            return;
+        }
+        callback(items);
+    });
+};
+
+module.exports.listForSite = function(site, callback, errback) {
+	Resources.find({ _siteUrl: site }, function(err, items) {
         if (err) {
             errback(err);
             return;
@@ -61,28 +71,31 @@ module.exports.drop = function(callback, errback) {
 };
 
 module.exports.getBrokenLinks = function(url, callback, errback) {
-	Resources.find({
-	    $and : [
-	        { "_siteUrl": url },
-	        { "isBroken": true }
-	    ]
-	}, function(err, docs) {
-		console.log('yo man..', url, docs);
-		if(err) {
-			errback(err);
-			return;
-		}
+	console.log('getBrokenLinks: ', url);
+	Resources.find(
+		{ _siteUrl: url, isBroken: true }, 
+		{ info: 1, _id: 0 }, 
+		function(err, docs) {
+			console.log('yo man..', url, docs);
+			if(err) {
+				errback(err);
+				return;
+			}
 
-		callback(docs);
-	});
+			callback(docs);
+		}
+	);
 };
 
 module.exports.nukeResourcesForPage = function(array, callback, errback) {
+	console.log('array: ', array);
 	var query = ["$or:["];
 	array.forEach(function(id) {
 		query.push("{_id:"+id+"},");
 	});
 	query.push("]");
+
+	console.log('query: ', query.join(""));
 
 	Resources.find().remove(query.join(""), function(err, doc) {
 		if(err) {

@@ -20,7 +20,11 @@ function makeCrawler(host, config) {
     crawler.initialPort = parseInt(config.initialPort) || 20;
     crawler.interval = parseInt(config.interval) || 250;
     crawler.maxConcurrency = parseInt(config.maxConcurrency) || 1;
-    crawler.maxDepth = parseInt(config.maxDepth);
+    crawler.maxDepth = parseInt(config.maxDepth) || 0;
+    crawler.filterByDomain = false;
+
+    console.log('config: ', config);
+    console.log('crawler: ', crawler);
 
     return crawler;
 };
@@ -41,17 +45,69 @@ function crawl(host, config, onComplete) {
         console.log('start'); 
     });
 
-    myCrawler.addFetchCondition(function(parsedURL, queueItem) {
-        console.log('addFetchCondition: ', this.goodResources.hasOwnProperty(parsedURL.path));
+    /* 
+        load in resources from other domains but dont crawl their whole site.
 
-        // get the link if it is not already added to the goodResources object.
-        if(!this.goodResources.hasOwnProperty(parsedURL.path)) return true;
+        fetch condition that returns false if queueItem.host is the same as referrerQueueItem.host, 
+        unless they both equal crawler.host 
+    */
+    // myCrawler.addFetchCondition(function(queueItem, referrerQueueItem) {
+    //     console.log('addFetchCondition 1: ', queueItem.host, referrerQueueItem.host, myCrawler.host, ' | ', referrerQueueItem.host != myCrawler.host);
+    //     // if(queueItem.host === referrerQueueItem.host) {
+    //     //     if(queueItem.host === myCrawler.host && referrerQueueItem.host === myCrawler.host) return true;
+    //     //     return false;
+    //     // }
 
-        // if it is on the object, call shouldFetch to see if it is a redirect or a downloaded.
-        return this.goodResources[parsedURL.path].shouldFetch();
-    }.bind(myCrawler));
+    //     // referrer doesn't equal the host site.
+    //     // return referrerQueueItem.host != myCrawler.host ? false : true;
+    // });
+
+    myCrawler.addFetchCondition(function(queueItem, referrerQueueItem) {
+        console.log('addFetchCondition 2', myCrawler.host);
+        console.log('queueItem: ', queueItem);
+        console.log('referrerQueueItem: ', referrerQueueItem);
+
+        // return referrerQueueItem.host != myCrawler.host ? false : true;
+
+        // console.log('requested from different site: ', referrerQueueItem.host != myCrawler.host);
+
+        // bad protocol
+        // if(referrerQueueItem.protocol === "https" && queueItem.protocol != "https") {
+        //     console.log(queueItem, referrerQueueItem);
+        //     throw new Error('mixed media');
+        //     queueItem.badProtocol = true;
+        // }
+
+        // requesting resource from same domain as page resource was found on.
+        if(queueItem.host === referrerQueueItem.host) {
+            console.log('resource host is same as referrer host');
+
+            // the referrer page host is not the crawler host.
+            if(queueItem.host != myCrawler.host && referrerQueueItem.host != myCrawler.host) {
+                console.log('referrer page host is not crawler host.')
+                return false;
+            }
+            // else return true;
+            else { // the referrer page host is the crawler host.
+
+                console.log('referrer page host is crawler host.')
+                // get the link if it is not already added to the goodResources object.
+                if(!myCrawler.goodResources.hasOwnProperty(queueItem.path)) return true;
+
+                // if it is on the object, call shouldFetch to see if it is a redirect or a downloaded.
+                return myCrawler.goodResources[queueItem.path].shouldFetch();
+            }
+        }
+
+        // requesting resource from different domain the page resource was found on.
+        else if(referrerQueueItem.host != myCrawler.host) return false;
+
+        // download.
+        else return true;
+    });
 
     myCrawler.on('fetchstart', function(queueItem, requestOptions) {
+        console.log('fetchstart: ', queueItem);
         site.fetchStart(queueItem);
     });
 
@@ -65,6 +121,7 @@ function crawl(host, config, onComplete) {
     });
 
     myCrawler.on('discoverycomplete', function(queueItem, resources) {
+        console.log('discoverycomplete: ', resources);
         siteStatus.updateTotalResources(myCrawler.queue.length);
     });
 
@@ -142,8 +199,9 @@ function processNextUpdateInQueue() {
     SiteService.findSite(host, function(siteFromDb) {
 
         var resourcesRemoved = -1;
+        siteFromDb = siteFromDb.site;
 
-        nukePage(host, path, function() {
+        nukeResourcesForPage(host, path, function() {
             resourcesRemoved = 1;
         }, function() {
             resourcesRemoved = 0;
@@ -168,6 +226,7 @@ function processNextUpdateInQueue() {
         }, function(err) {
             errback(err);
         });
+
     }, function(err) {
         errback(err);
     });
@@ -189,6 +248,7 @@ function updatePage(host, path, callback, errback) {
             - will this update run once full-site crawl complete? 
             - do i really want this?
                 - unitypoint takes a day to run.. I think i'd want to run the updatePage even if the full site is being crawled.
+                - maybe I add a timestamp to every page? then when full site is crawled, i do a check between what was just crawled and what is in the database. If a page in the database has a more recent time stamp then what is in the crawl, use that.
     */
     if(isCrawling(host)) {
         var siteStatus = currCrawls[host];
@@ -218,12 +278,13 @@ function mockCrawler(stub) {
     Crawler = stub;
 };
 
-function nukePage(host, path, callback, errback) {
+function nukeResourcesForPage(host, path, callback, errback) {
 
     // get page
-    PagesService.getPageByPath(host, path, function(doc) {
+    PagesService.listForSiteByPath(host, path, function(doc) {
+        console.log('doc: ', doc);
         // nuke resources.
-        ResourcesService.nukeResources(doc.resources, function() {
+        ResourcesService.nukeResourcesForPage(doc[0].resources, function() {
             callback();
         }, function(err) {
             errback(err);

@@ -24,21 +24,30 @@ var Site = function(url, crawlFrequency, crawlOptions) {
     this.crawlType = crawlOptions.hasOwnProperty('crawlType') ?  crawlOptions.crawlType : 'full-site';
 };
 Site.prototype.fetchStart = function(queueItem) { 
+    console.log('fetchStart: ', queueItem);
     this.queue.push(queueItem);
 };
 Site.prototype.fetchTimeout = function(queueItem) {
     this.fetchTimeouts.push(queueItem);
 };
 Site.prototype.crawlStarted = function() {
+    this._logStage('crawlStarted');
     if(this.crawlType === 'page-update') return;
     this.crawlStartTime = Date.now();
 };
+Site.prototype._logStage = function(stageName) {
+    console.log('*****************************************');
+    console.log('************** '+stageName+' ************');
+    console.log('*****************************************');
+};
 Site.prototype.crawlFinished = function(type) {
+    this._logStage('crawlFinished');
     if(type != undefined) this.crawlType = type;
     this._processQueue();
     this._processResources();
     this._groupByPages();
     this.processedGoodResources = null; // free some space.
+    this._findWorstBrokenLinks();
     if(this.crawlType === 'page-update') return;
     this.crawlEndTime = Date.now();
     this.crawlDurationInSeconds = capDecimals((this.crawlEndTime - this.crawlStartTime) / 1000, 2);
@@ -61,6 +70,11 @@ Site.prototype._isBrokenResource = function(resource) {
         if(resource.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(resource.locationFromHeader)) brokenResource = true;
     }
 
+    // if(resource.badProtocol) {
+    //     console.log('protocol mismatch: ', resource.protocol, this.crawlOptions.protocol);
+    //     brokenResources = true;
+    // }
+
     return brokenResource;
 };
 
@@ -72,8 +86,8 @@ Site.prototype._processQueue = function() {
     var array = [];
     this.queue.forEach(function(queueItem) {
 
-        console.log("processQueue in Loop: ", queueItem.path, " | ",processedResources.hasOwnProperty(queueItem.path), " | ", !this._isBrokenResource(queueItem) , " | ", queueItem.status);
-        
+        // console.log("processQueue in Loop: ", queueItem.path, " | ",processedResources.hasOwnProperty(queueItem.path), " | ", !this._isBrokenResource(queueItem) , " | ", queueItem.status);
+
         // check if we've processed this link.
         if(processedResources.hasOwnProperty(queueItem.path)) return;
         var isBroken = this._isBrokenResource(queueItem);
@@ -98,8 +112,13 @@ Site.prototype._processQueue = function() {
 Site.prototype._processResources = function() {
     console.log('crawlType from _processResources: ', this.crawlType);
     this.resources.forEach(function(resource) {
-        console.log("resource: ", resource);
+        // console.log("resource: ", resource);
         // if(this.crawlType === 'full-site') {
+
+            this.setResourceType(resource.info);
+
+            /* add referrerPath: */
+            if(resource.info.hasOwnProperty('referrer')) resource.info.referrerPath = resource.info.referrer.replace(this.crawlOptions.protocol+"://"+this.crawlOptions.host, "");
 
             // broken Resources
             if(this._isBrokenResource(resource.info)) this.brokenResources.push(resource);
@@ -131,8 +150,21 @@ Site.prototype._processResources = function() {
         //     }
         // }
 
+
+
     }.bind(this));
 };
+
+Site.prototype.setResourceType = function(resource) {
+    var contentType = resource.stateData.contentType;
+    if(/text/.test(contentType)) resource.type = 'text';
+    else if(/image/.test(contentType)) resource.type = 'image';
+    else if(/audio/.test(contentType)) resource.type = 'audio';
+    else if(/video/.test(contentType)) resource.type = 'video';
+    else if(/application/.test(contentType)) resource.type = 'application';
+    else resource.type = null;
+};
+
 Site.prototype.alreadyProcessed = function(url) {
     if(this.processedGoodResources[url]) return true;
     this.processedGoodResources[url] = true;
@@ -179,6 +211,58 @@ Site.prototype._getPathForResource = function(url) {
 };
 
 /*
+    - looks through this.brokenResources array and finds the most frequent offenders
+*/
+Site.prototype._findWorstBrokenLinks = function() {
+    var worstOffenders = new OffendersList();
+    this.brokenResources.forEach(function(resource) {
+        var indexOfResource = worstOffenders.isInArray('path', resource.info.path);
+        console.log('test2: ', indexOfResource);
+        if(indexOfResource !== -1) worstOffenders.array[indexOfResource].length++;
+        else worstOffenders.addItem(new Offender(resource.info.path));
+    });
+
+    worstOffenders.sortByProp('length', true);
+
+    console.log('worstOffenders: ', worstOffenders.array);
+
+    this.worstOffenders = worstOffenders.array.slice(0,5);
+}; 
+
+var Offender = function(path) {
+    this.path = path;
+    this.length = 1;
+}
+
+var OffendersList = function() {
+    this.array = [];
+};
+OffendersList.prototype.isInArray = function(prop, val) {
+    return this.array.map(function (element) {return element[prop];}).indexOf(val);
+};
+OffendersList.prototype.sortByProp = function(prop, back) {
+    back = back || false;
+    console.log('back: ', back);
+    this.array.sort(function(a,b) {
+
+        // least to greatest
+        if (!back && a[prop] < b[prop]) return -1;
+        else if (!back && a[prop] > b[prop]) return 1;
+
+        // greatest to least
+        else if (back && a[prop] > b[prop]) return -1;
+        else if (back && a[prop] < b[prop]) return 1;
+        
+        // a must be equal to b
+        return 0;
+    });
+
+};
+OffendersList.prototype.addItem = function(obj) {
+    this.array.push(obj);
+};
+
+/*
     Snap shot of site crawling progress. Stored on server and given to client when status is requested.
 */
 var SiteStatus = function(crawlType) {
@@ -201,3 +285,4 @@ SiteStatus.prototype.updatePercentComplete = function() {
 
 module.exports.Site = Site;
 module.exports.SiteStatus = SiteStatus;
+module.exports.OffendersList = OffendersList;

@@ -3,16 +3,19 @@ var router = express.Router();
 var crawler = require("../custom-modules/crawler.js");
 var scheduler = require("../custom-modules/scheduler.js");
 var fs = require("fs");
+var CORS = require('../custom-modules/CORS');
 
 var SitesService = require("../services/sites.js");
 var PagesService = require("../services/pages.js");
 var ResourcesService = require("../services/resources.js");
 
 var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
+var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
 var crawlerCtrl = require("../controllers/crawler-controller");
 
 function startCrawl(url, config, callback, errback) {
 
+	console.log('starting Crawl for: ', url);
 	// crawling already happening for url
 	if(crawler.isCrawling(url)) {
 		errback({message: "crawling already in process", url});
@@ -23,7 +26,7 @@ function startCrawl(url, config, callback, errback) {
 
 		if( !scheduler.isSiteRegistered(url) ) {
 			callback({
-				message: 'site was not registered at the time it was attempted to be save.',
+				message: 'site was not registered at the time it was attempted to be saved.',
 				status: 0,
 				site: null,
 				err: null
@@ -76,38 +79,54 @@ SitesService.list(function(array) {
 	should stop scheduler and reschedule upon completion 
 */
 router.post("/api/crawler/:host/start", function(req, res) {
-
+	CORS.enable(res);
+	var host = normalizeUrl(req.params.host);
 	// crawling already happening for url
-	if(crawler.isCrawling(req.params.host)) {
-		res.json({message: "crawling already in process", host: req.params.host});
+	if(crawler.isCrawling(host)) {
+		res.json({message: "crawling already in process", host: host});
 	}
 
-	// start crawling..
-	startCrawl(req.params.host, req.body, function(o) {
-		if(o.status) res.json({message: o.message});
-		else res.json({message: o.message});
-	}, function(err) {
-		res.status(400).json(err);
+	SitesService.findSite(host, function(siteFromDb) {
+
+		if(siteFromDb == null) {
+			res.json({ message: "site not registered" });
+			return;
+		}
+
+		console.log('siteFromDb: ', siteFromDb.site);
+
+		siteFromDb.site.crawlOptions.crawlType = 'full-page';
+
+		// start crawling..
+		startCrawl(host, siteFromDb.site.crawlOptions, function(o) {
+			console.log('startCrawl callback: ', o.status);
+			if(o.status) res.json({message: o.message});
+			else res.json({message: o.message});
+		}, function(err) {
+			res.status(400).json(err);
+		});
 	});
 });
 
 router.get("/api/crawler/:host/status", function(req, res) {
-	res.json({crawling: crawler.isCrawling(req.params.host), host: req.params.host});
+	var host = normalizeUrl(req.params.host);
+	res.json({crawling: crawler.isCrawling(host), host: host});
 });
 
 /* main endpoint to hit for setting up a site to crawl. */
 router.post("/api/crawler/:host/register", function(req, res) {
 	console.log('register endpoint');
-	SitesService.findSite(req.params.host, function(doc) {
+	var host = normalizeUrl(req.params.host);
+	SitesService.findSite(host, function(doc) {
 
 		/* site registered - dont do anything */
-		if(doc !== null) {
+		if(doc.site !== null) {
 			console.log("site already registered");
 			res.json({ message: "site already registered" });
 			return;
 		}
 
-		var siteStub = { url: req.params.host, crawlFrequency: req.body.crawlFrequency, crawlOptions: req.body };
+		var siteStub = { url: host, crawlFrequency: req.body.crawlFrequency, crawlOptions: req.body };
 
 		startCrawl(siteStub.url, siteStub.crawlOptions, function(o) {
 			if(o.status) console.log(o.message);
@@ -132,7 +151,8 @@ router.post("/api/crawler/:host/register", function(req, res) {
 
 router.post("/api/crawler/:host/unRegister", function(req, res) {
 	console.log('unregistered endpoint', req.params.host);
-	if(req.params.host === 'all') {
+	var host = normalizeUrl(req.params.host);
+	if(host === 'all') {
         scheduler.flush(function() {
         	res.json({message: 'droppped all sites'});
         }, function(err) {
@@ -140,7 +160,7 @@ router.post("/api/crawler/:host/unRegister", function(req, res) {
         });
 	}
 	else {
-		scheduler.unRegisterSite(req.params.host, function() {
+		scheduler.unRegisterSite(host, function() {
 			res.json({message: "site successfully unregistered"});
 		}, function(err) {
 			res.status(400).json(err);
@@ -149,6 +169,7 @@ router.post("/api/crawler/:host/unRegister", function(req, res) {
 });
 
 router.get("/api/crawler/status", function(req, res) {
+	CORS.enable(res);
 	if(!crawler.isIdle()) res.json({ status: 'crawling', crawls: crawler.currCrawls });
 	else res.json({ status: 'idle', crawls: crawler.currCrawls });
 });

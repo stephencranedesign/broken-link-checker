@@ -36,3 +36,9 @@ module.exports.capDecimals = function(num, duration) {
 
 	return Math.round(num * 100) / val;
 };
+
+module.exports.normalizeUrl = function (url) {
+    // regex to normalize entries somehow?
+    var clean = url.replace('http://', '').replace('https://', '').replace('www.', '');
+    return "www."+clean;
+};

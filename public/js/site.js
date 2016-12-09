@@ -118,18 +118,36 @@ var siteInfo = (function($) {
 
 	/* pages */
 	var pagesInput = $('#pages-input'),
+		pathInput = $('#path-input'),
 		pagesButton = $('#pages-button');
 
 	pagesButton.on('click', function() {
-		$.get("/api/pages/list", function(data) {
-			console.log("pages data: ", data);
-			// var pages = [];
-			// var ul = $('#pages');
-			// data.forEach(function(o) {
-			// 	pages.push("<li>"+o.url+"</li>")
-			// });
-			// ul.html(pages.join(''));
-		});
+
+		var host = pagesInput.val(),
+			path = pathInput.val();
+
+		if(path === "") {
+			$.get("/api/pages/"+host+"/list", function(data) {
+				console.log("pages data: ", data);
+				// var pages = [];
+				// var ul = $('#pages');
+				// data.forEach(function(o) {
+				// 	pages.push("<li>"+o.url+"</li>")
+				// });
+				// ul.html(pages.join(''));
+			});
+		}
+		else {
+			$.post("/api/pages/"+host+"/getPath", { path: path },function(data) {
+				console.log("pages data: ", data);
+				// var pages = [];
+				// var ul = $('#pages');
+				// data.forEach(function(o) {
+				// 	pages.push("<li>"+o.url+"</li>")
+				// });
+				// ul.html(pages.join(''));
+			});
+		}
 	});
 
 	/* resources */
@@ -137,7 +155,7 @@ var siteInfo = (function($) {
 		resourcesButton = $('#resources-button');
 
 	resourcesButton.on('click', function() {
-		$.get("/api/resources/list", function(data) {
+		$.get("/api/resources/"+resourcesInput.val()+"/list", function(data) {
 			console.log("resources data: ", data);
 			// var resources = [];
 			// var ul = $('#resources');

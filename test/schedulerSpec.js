@@ -2,10 +2,11 @@ var chai = require('chai');
 var chaiAsPromised = require("chai-as-promised");
 var scheduler = require('../custom-modules/scheduler.js');
 var asyncTimeout = require('./test-utils.js').asyncTimeout;
+var flushDb = require("./test-utils.js").flushDb;
 
-var should = chai.should();
+// var should = chai.should();
 
-chai.use(chaiAsPromised);
+// chai.use(chaiAsPromised);
 
 var fakeSite = {
 	url: 'test.org',

@@ -8,6 +8,7 @@ var SiteSchema = new mongoose.Schema({
     brokenResources: { type: Number, required: false },
     redirectedResources: { type: Number, required: false },
     fetchTimeouts: { type: Number, required: false },
+    worstOffenders: { type: Array, required: false },
 
     crawlOptions: { type: Object, required: false },
     crawlDurationInSeconds: { type: Number, required: false },

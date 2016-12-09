@@ -2,6 +2,9 @@ var express = require('express');
 var router = express.Router();
 var Sites = require('../services/sites.js');
 var scheduler = require("../custom-modules/scheduler.js");
+var CORS = require('../custom-modules/CORS');
+
+var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
 
 /*
     endpoints for getting at the info saved.
@@ -18,10 +21,10 @@ router.get('/api/sites/list', function(req, res) {
     });
 });
 
-router.get('/api/sites/find/:name', function(req, res) {
-    console.log('name: ', req.params.name);
-    Sites.findSite(req.params.name, function(doc) {
-        console.log('find ', doc);
+router.get('/api/sites/find/:host', function(req, res) {
+    var host = normalizeUrl(req.params.host);
+    CORS.enable(res);
+    Sites.findSite(host, function(doc) {
         res.json(doc);
     }, function(err) {
         console.log('err on delete: ', err);
@@ -29,9 +32,11 @@ router.get('/api/sites/find/:name', function(req, res) {
     });
 });
 
-router.get('/api/sites/findBrokenLinks/:name', function(req, res) {
-    console.log('name: ', req.params.name);
-    Sites.findBrokenLinks(req.params.name, function(doc) {
+router.get('/api/sites/findBrokenLinks/:host', function(req, res) {
+    console.log('host: ', req.params.host);
+    var host = normalizeUrl(req.params.host);
+    
+    Sites.findBrokenLinks(host, function(doc) {
         console.log('find ', doc);
         res.json(doc);
     }, function(err) {

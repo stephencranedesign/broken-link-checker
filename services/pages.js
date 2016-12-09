@@ -38,8 +38,34 @@ module.exports.list = function(callback, errback) {
     });
 };
 
+module.exports.listForSite = function(site, callback, errback) {
+	console.log("list");
+	Pages.find({ _siteUrl: site }, function(err, items) {
+        if (err) {
+            errback(err);
+            return;
+        }
+        callback(items);
+        // mongoose.disconnect();
+    });
+};
+
+module.exports.listForSiteByPath = function(site, path, callback, errback) {
+	console.log("listForSiteByPath: ", site, path);
+
+	Pages.find({ "_siteUrl": site, "path": path }, function(err, items) {
+        if (err) {
+            errback(err);
+            return;
+        }
+        console.log('test: ', err, items);
+        callback(items);
+        // mongoose.disconnect();
+    });
+};
+
 module.exports.remove = function(query, callback, errback) {
-	Pages.find().remove(query, function(err) {
+	Pages.find().remove(query, function(err, result) {
 		if(err) {
 			errback(err);
 			return;
@@ -52,11 +78,10 @@ module.exports.remove = function(query, callback, errback) {
 module.exports.getPageByPath = function(url, path, callback, errback) {
 	console.log("nukePage");
 	
+
 	var query = {
-	    $and : [
-	        { "_siteUrl": url },
-	        { "path": path }
-	    ]
+		_siteUrl: url, 
+		path: path
 	};
 
 	module.exports.remove(query, callback, errback);
@@ -66,9 +91,10 @@ module.exports.drop = function(callback, errback) {
     mongoose.connection.collections['pages'].drop( function(err) {
         if(err) {
             console.log('err: ', err);
-            errback(err);
+            if(errback) errback(err);
+            return;
         }
 
-        callback();
+         if(callback) callback();
     });
 };

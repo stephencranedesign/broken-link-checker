@@ -1,10 +1,6 @@
 var Sites = require('../models/Sites.js');
 var mongoose = require('mongoose'); // for drop function
-
-function _normalizeUrl(url) {
-    // regex to normalize entries somehow?
-    return url.replace('http://', '').replace('https://', '').replace('www.', '');
-}
+var crawler = require('../custom-modules/crawler');
 
 function _create(site, callback, errback) {
     Sites.create(
@@ -16,6 +12,7 @@ function _create(site, callback, errback) {
             downloadedResources: site.downloadedResources.length,
             redirectedResources: site.redirectedResources.length,
             fetchTimeouts: site.fetchTimeouts.length,
+            worstOffenders: site.worstOffenders,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds,
@@ -34,7 +31,6 @@ function _create(site, callback, errback) {
 }
 
 module.exports.save = function(site, callback, errback) {
-    site.url = _normalizeUrl(site.url);
     Sites.findOneAndUpdate(
         {
             url: site.url
@@ -46,6 +42,7 @@ module.exports.save = function(site, callback, errback) {
             downloadedResources: site.downloadedResources.length,
             redirectedResources: site.redirectedResources.length,
             fetchTimeouts: site.fetchTimeouts.length,
+            worstOffenders: site.worstOffenders,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds,
@@ -64,7 +61,6 @@ module.exports.save = function(site, callback, errback) {
 };
 
 module.exports.updateLinkCount = function(site, callback, errback) {
-    site.url = _normalizeUrl(site.url);
     Sites.findOneAndUpdate(
         {
             url: site.url
@@ -76,6 +72,7 @@ module.exports.updateLinkCount = function(site, callback, errback) {
             downloadedResources: site.downloadedResources.length,
             redirectedResources: site.redirectedResources.length,
             fetchTimeouts: site.fetchTimeouts.length,
+            worstOffenders: site.worstOffenders,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds
@@ -93,7 +90,6 @@ module.exports.updateLinkCount = function(site, callback, errback) {
 };
 
 module.exports.findLinksForSite = function(url, callback, errback) {
-    url = _normalizeUrl(url);
     Sites.findOne({url: url}, 'url date downloadedLinks redirectedLinks').lean().exec(function(err, doc) {
         if(err) {
             errback(err);
@@ -105,7 +101,6 @@ module.exports.findLinksForSite = function(url, callback, errback) {
 };
 
 module.exports.findbrokenLinks = function(url, callback, errback) {
-    url = _normalizeUrl(url);
     Sites.findOne({url: url}, 'url date brokenLinks' ,function(err, doc) {
         if(err) {
             errback(err);
@@ -117,14 +112,16 @@ module.exports.findbrokenLinks = function(url, callback, errback) {
 };
 
 module.exports.findSite = function(url, callback, errback) {
-    url = _normalizeUrl(url);
     Sites.findOne({url: url}, function(err, doc) {
         if(err) {
             errback(err);
             return;
         }
 
-        callback(doc);
+        var isCrawling = false;
+        if(doc !== null && crawler.currCrawls.hasOwnProperty(url)) isCrawling = true;
+
+        callback({site: doc, isCrawling: isCrawling});
     });
 };
 
@@ -166,10 +163,10 @@ module.exports.remove = function(path, callback, errback) {
 module.exports.drop = function(callback, errback) {
     mongoose.connection.collections['sites'].drop( function(err) {
         if(err) {
-            console.log('err: ', err);
-            errback(err);
+            if(errback) errback(err);
+            return;
         }
 
-        callback();
+        if(callback) callback();
     });
 };
