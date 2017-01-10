@@ -11,6 +11,7 @@
   "dependencies": {
     "JSONStream": "^1.1.1",
     "body-parser": "^1.15.1",
+    "bcrypt": "^1.0.1",
     "cheerio": "^0.20.0",
     "cookie-parser": "^1.4.3",
     "event-stream": "^3.3.2",
@@ -20,8 +21,11 @@
     "ftp": "^0.3.10",
     "ftp-client": "^0.2.2",
     "googleapis": "^7.0.0",
+    "jwt-simple": "^0.5.1",
     "mongoose": "^4.4.17",
+    "morgan": "^1.7.0",
     "passport": "^0.3.2",
+    "passport-jwt": "^2.2.1",
     "passport-local": "^1.0.0",
     "request": "^2.73.0",
     "simplecrawler": "^0.6.2",
@@ -33,6 +37,7 @@
     "chai-as-promised": "^5.3.0",
     "chai-for-sinon": "^0.1.0",
     "chai-http": "^2.0.1",
+    "mocha": "^3.2.0",
     "sinon": "^1.17.4"
   }
 }

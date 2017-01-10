@@ -1,71 +1,165 @@
-var express = require('express'),
-    router = express.Router(),
-    passport = require('passport'),
-    LocalStrategy = require('passport-local').Strategy,
-    Users = require('../models/Users');
+var express     = require('express');
+var bodyParser  = require('body-parser');
+var morgan      = require('morgan');
+var mongoose    = require('mongoose');
+var passport    = require('passport');
+var User        = require('../models/Users').model; // get the mongoose model
+var UserServices = require('../models/Users').services;
+var jwt         = require('jwt-simple');
+var JwtStrategy = require('passport-jwt').Strategy;
+var ExtractJwt  = require('passport-jwt').ExtractJwt;
+var appSecret   = "brokenlinkgenerator";
+ 
+function usePassport(passport) {
+  var opts = {};
+  opts.secretOrKey = appSecret;
+  opts.jwtFromRequest = ExtractJwt.fromAuthHeader();
+  passport.use(new JwtStrategy(opts, function(jwt_payload, done) {
+    User.findOne({id: jwt_payload.id}, function(err, user) {
+          if (err) {
+              return done(err, false);
+          }
+          if (user) {
+              done(null, user);
+          } else {
+              done(null, false);
+          }
+      });
+  }));
+};
 
-var bodyParser = require('body-parser');
-var session = require('express-session');
+function config(app) {
+  // get our request parameters
+  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.json());
+   
+  // log to console
+  app.use(morgan('dev'));
 
-passport.use(new LocalStrategy(
-  function(username, password, done) {
-    console.log('yo dawg');
-     Users.findOne({ username: username }, function (err, user) {
-      console.log('info: ', user);
-      if (err) { return done(err); }
-      if (!user) {
-        return done(null, false, { message: 'Incorrect username.' });
+  // Use the passport package in our application
+  app.use(passport.initialize()); 
+
+  // pass passport for configuration
+  usePassport(passport); 
+};
+ 
+// bundle our routes
+var apiRoutes = express.Router();
+ 
+// create a new user account (POST http://localhost:8080/api/signup)
+apiRoutes.post('/api/user/create', function(req, res) {
+  if (!req.body.name || !req.body.password) {
+    res.status(401);
+    res.json({success: false, msg: 'Please pass name and password.'});
+  } else {
+    var newUser = new User({
+      name: req.body.name,
+      password: req.body.password
+    });
+    // save the user
+    newUser.save(function(err) {
+      if (err) {
+        res.status(401);
+        return res.json({success: false, msg: 'Username already exists.'});
       }
-      if (!user.validPassword(password)) {
-        return done(null, false, { message: 'Incorrect password.' });
-      }
-      return done(null, user);
+      res.status(200);
+      res.json({success: true, msg: 'Successful created new user.'});
     });
   }
-));
-
-passport.serializeUser(function(user, done) {
-  done(null, user);
 });
 
-passport.deserializeUser(function(user, done) {
-  done(null, user);
+secure('/api/user/delete');
+// create a new user account (POST http://localhost:8080/api/signup)
+apiRoutes.post('/api/user/delete', function(req, res) {
+  if (!req.body.name) {
+    res.json({success: false, msg: 'Please pass name'});
+  } else {
+    // save the user
+    UserServices.delete(req.body.name, function(err, result) {
+
+      if (err) {
+        return res.json({success: false, msg: err});
+      }
+      else if( !result.result.ok ) {
+        return res.json({success: false, msg: "unknown error attempting to remove from db." }); 
+      }
+      else if (!result.result.n) {
+        return res.json({success: false, msg: 'No user with supplied Name'});
+      }
+
+      res.json({success: true, msg: 'Successfully deleted user'});
+    });
+  }
 });
 
-router.post('/login', passport.authenticate('local', { 
-  successRedirect: '/',
-  failureRedirect: '/login.html' 
-  })
-);
-
-router.get('/logout', function(req, res){
-  req.logout();
-  res.redirect('/login.html');
+// route to authenticate a user (POST http://localhost:8080/api/login)
+apiRoutes.post('/api/authenticate', function(req, res) {
+  User.findOne({
+    name: req.body.name
+  }, function(err, user) {
+    if (err) throw err;
+ 
+    if (!user) {
+      res.status(401);
+      res.send({success: false, msg: 'Authentication failed. User not found.'});
+    } else {
+      // check if password matches
+      user.comparePassword(req.body.password, function (err, isMatch) {
+        if (isMatch && !err) {
+          // if user is found and password is right create a token
+          var token = jwt.encode(user, appSecret);
+          // return the information including token as JSON
+          res.json({success: true, token: 'JWT ' + token});
+        } else {
+          res.status(401);
+          res.send({success: false, msg: 'Authentication failed. Wrong password.'});
+        }
+      });
+    }
+  });
 });
 
+// apiRoutes.use('/memberinfo', passport.authenticate('jwt', { session: false}), authenticateRoute);
 
-module.exports.config = function(app) {
-  app.use(bodyParser.json());
-  app.use(session({ 
-    resave: false,
-    saveUninitialized: false,
-    secret: 'keyboard cat' 
-  }));
-  app.use(passport.initialize());
-  app.use(passport.session());
-  app.use(router);
+function authenticateRoute(req, res, next) {
+  var token = getToken(req.headers);
+  if (token) {
+      var decoded = jwt.decode(token, appSecret);
+      User.findOne({
+        name: decoded.name
+      }, function(err, user) {
+          if (err) throw err;
+   
+          if (!user) {
+            res.status(401);
+            return res.json({success: false, msg: 'Authentication failed. User not found.'});
+          } else {
+              next();
+          }
+      });
+    } else {
+      res.status(401);
+      return res.json({success: false, msg: 'No token provided.'});
+  }
+}
+
+function secure(endPoint) {
+  apiRoutes.use(endPoint, passport.authenticate('jwt', { session: false}), authenticateRoute);
+}
+ 
+function getToken(headers) {
+  if (headers && headers.authorization) {
+    var parted = headers.authorization.split(' ');
+    if (parted.length === 2) {
+      return parted[1];
+    } else {
+      return null;
+    }
+  } else {
+    return null;
+  }
 };
 
-
-// As with any middleware it is quintessential to call next()
-// if the user is authenticated
-module.exports.isAuthenticated = function(loginPath, loginEndPoint) {
-  loginPath = loginPath || '/login.html';
-  loginEndPoint = loginEndPoint || '/login';
-
-  return function(req, res, next) {
-    console.log('url: ', req.url, loginPath, loginEndPoint);
-    if(req.url === loginPath || req.url === loginEndPoint || req.isAuthenticated()) { console.log('move along'); return next(); }
-    res.redirect('/login.html');
-  };
-};
+module.exports.config = config;
+module.exports.routes = apiRoutes;
+module.exports.secure = secure;

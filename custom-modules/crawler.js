@@ -12,33 +12,31 @@ var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
 var currCrawls = {};
 
 
+
 function makeCrawler(host, config) {
     var crawler = new BrokenLinkCrawler({host: host, uniqueUrlsOnly: false });
 
     crawler.initialProtocol = config.initialProtocol || 'http';
     crawler.initialPath = config.initialPath || '/';
-    crawler.initialPort = parseInt(config.initialPort) || 20;
+    if(config.port) crawler.port = parseInt(config.port);
     crawler.interval = parseInt(config.interval) || 250;
     crawler.maxConcurrency = parseInt(config.maxConcurrency) || 1;
     crawler.maxDepth = parseInt(config.maxDepth) || 0;
     crawler.filterByDomain = false;
 
-    console.log('config: ', config);
-    console.log('crawler: ', crawler);
-
     return crawler;
 };
 
-function crawl(host, config, onComplete) {
+function crawl(user, host, config, onComplete) {
 
     var host = host;
     var myCrawler = makeCrawler(host, config);
     var crawlFrequency = config.crawlFrequency || 10080; // 7 days.
 
-    var site = new Site(host, crawlFrequency, config); 
+    var site = new Site(user, host, crawlFrequency, config); 
     var siteStatus = new SiteStatus(config.crawlType);
 
-    currCrawls[host] = siteStatus;
+    currCrawls[user+host] = siteStatus;
 
     myCrawler.on('crawlstart', function() { 
         site.crawlStarted();
@@ -129,7 +127,7 @@ function crawl(host, config, onComplete) {
         site.crawlFinished();
         if(isInUpdateQueue(site.url)) removeFromUpdateQueue(site);
         onComplete(site);
-        delete currCrawls[host];
+        delete currCrawls[user+host];
     });
 
     myCrawler.start();
@@ -160,8 +158,8 @@ function processHeader() {
     };
 };
 
-function isCrawling(url) {
-    return currCrawls.hasOwnProperty(url) ? true : false;
+function isCrawling(user, url) {
+    return currCrawls.hasOwnProperty(user+url) ? true : false;
 };
 
 /*
@@ -192,11 +190,12 @@ function processNextUpdateInQueue() {
 
     var update = updateQueue[0],
         host = update.host,
+        user = update.user,
         path = update.path,
         callback = update.callback,
         errback = update.errback;
 
-    SiteService.findSite(host, function(siteFromDb) {
+    SiteService.findSite(user, host, function(siteFromDb) {
 
         var resourcesRemoved = -1;
         siteFromDb = siteFromDb.site;
@@ -239,7 +238,7 @@ function updateComplete() {
     processNextUpdateInQueue();
 }
 
-function updatePage(host, path, callback, errback) {
+function updatePage(user, host, path, callback, errback) {
 
     addUpdateToQueue({ host: host, path: path, callback: callback, errback: errback });
 
@@ -250,8 +249,8 @@ function updatePage(host, path, callback, errback) {
                 - unitypoint takes a day to run.. I think i'd want to run the updatePage even if the full site is being crawled.
                 - maybe I add a timestamp to every page? then when full site is crawled, i do a check between what was just crawled and what is in the database. If a page in the database has a more recent time stamp then what is in the crawl, use that.
     */
-    if(isCrawling(host)) {
-        var siteStatus = currCrawls[host];
+    if(isCrawling(user, host)) {
+        var siteStatus = currCrawls[user+host];
         if(siteStatus.crawlType === 'full-site') return;
     }
 
@@ -278,13 +277,13 @@ function mockCrawler(stub) {
     Crawler = stub;
 };
 
-function nukeResourcesForPage(host, path, callback, errback) {
+function nukeResourcesForPage(user, host, path, callback, errback) {
 
     // get page
-    PagesService.listForSiteByPath(host, path, function(doc) {
+    PagesService.listForSiteByPath(user, host, path, function(doc) {
         console.log('doc: ', doc);
         // nuke resources.
-        ResourcesService.nukeResourcesForPage(doc[0].resources, function() {
+        ResourcesService.nukeResourcesForPage(user, doc[0].resources, function() {
             callback();
         }, function(err) {
             errback(err);

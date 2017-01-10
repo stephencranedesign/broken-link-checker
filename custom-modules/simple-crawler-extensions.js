@@ -92,6 +92,12 @@ class BrokenLinkCrawler extends Crawler {
             console.log(resources.length);
         }).get();
 
+        $("link[rel='next']").map(function() {
+            var url = $(this).attr("href");
+            if(crawler.shouldAddResource(url)) resources.push(url);
+            console.log(resources.length);
+        }).get();
+
         this.pagesCrawled[queueItem.url] = true;
 
         console.log('discoveredResources: ', resources);

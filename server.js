@@ -8,24 +8,18 @@ var siteRoutes = require('./routes/sites');
 var crawlerRoutes = require('./routes/crawler');
 var pagesRoutes = require('./routes/pages');
 var resourcesRoutes = require('./routes/resources');
+var authentication = require('./custom-modules/authentication.js');
 
 var port = process.env.PORT || 8080;
 
 var app = express();
 app.use(express.static('public'));
 
-// require('./custom-modules/google-apis.js').config(app);
-
-
-/* for login stuff.. */
-// var auth = require('./custom-modules/authentication');
-// auth.config(app);
-
-// app.use(auth.isAuthenticated('/login.html'));
-
-// if(typeof auth === 'undefined')
 app.use(bodyParser.urlencoded({ extended: true }));	
 
+authentication.config(app);
+
+app.use('/', authentication.routes);
 app.use('/', siteRoutes);
 app.use('/', crawlerRoutes);
 app.use('/', pagesRoutes);

@@ -5,11 +5,12 @@ var ObjectID = require('mongodb').ObjectID;
 */
 
 class Page {
-	constructor(siteUrl, fullUrl, path) {
+	constructor(user, siteUrl, fullUrl, path) {
 		this._id = new ObjectID();
 		this._siteUrl = siteUrl;
 	    this.path = path;
 	    this.fullUrl = fullUrl;
+	    this.user = user;
 	    this.resources = [];
 	}
 }

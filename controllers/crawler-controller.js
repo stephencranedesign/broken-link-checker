@@ -6,7 +6,7 @@ var scheduler = require("../custom-modules/scheduler.js");
 var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
 
 
-module.exports.saveSite = function (site, callback, errback) {
+module.exports.saveSite = function (user, site, callback, errback) {
 
 	var pagesSaved = -1, 
 		resourcesSaved = -1, 
@@ -18,36 +18,43 @@ module.exports.saveSite = function (site, callback, errback) {
 		resourcesErr,
 		sitesErr;
 
+	console.log('site pages: ', site.pages);
+	console.log('site resources: ', site.resources);
 
-	// save pages to db
-	PagesService.insertMany(site.pages, function(pages) {
-		pages = pages;
-		pagesSaved = 1;
-	}, function(err) {
-		console.log('err tyring to save to pages: ', err);
-		pagesSaved = 0;
-		pagesErr = err;
-	});
+	try {
+		// save pages to db
+		PagesService.insertMany(site.pages, function(pages) {
+			pages = pages;
+			pagesSaved = 1;
+		}, function(err) {
+			console.log('err tyring to save to pages: ', err);
+			pagesSaved = 0;
+			pagesErr = err;
+		});
 
-	// save resources to db
-	ResourcesService.insertMany(site.resources, function(resources) {
-		resources = resources;
-		resourcesSaved = 1;
-	}, function(err) {
-		console.log('err tyring to save to pages: ', err);
-		resourcesSaved = 0;
-		resourcesErr = err;
-	});
+		// save resources to db
+		ResourcesService.insertMany(site.resources, function(resources) {
+			resources = resources;
+			resourcesSaved = 1;
+		}, function(err) {
+			console.log('err tyring to save to pages: ', err);
+			resourcesSaved = 0;
+			resourcesErr = err;
+		});
 
-	// save sites to db
-	SiteService.save(site, function(site) {
-		site = site;
-		siteSaved = 1;
-	}, function(err) {
-		console.log('err tyring to save to pages: ', err);
-		siteSaved = 0;
-		siteErr = err;
-	});
+		// save sites to db
+		SiteService.save(site.user, site, function(site) {
+			site = site;
+			siteSaved = 1;
+		}, function(err) {
+			console.log('err tyring to save to pages: ', err);
+			siteSaved = 0;
+			siteErr = err;
+		});
+
+	} catch(e) {
+		console.log('error: ', e);
+	}
 
 	// waits till above is complete..
 	recursiveCheck(function() {
@@ -88,14 +95,14 @@ module.exports.saveSite = function (site, callback, errback) {
 	});
 };
 
-module.exports.clearPagesAndResourcesForSite = function(url, callback, errback) {
+module.exports.clearPagesAndResourcesForSite = function(user, url, callback, errback) {
 
 	var pagesRemoved = -1,
 		pagesErr = null,
 		resourcesRemoved = -1,
 		resourcesErr = null;
 
-	PagesService.remove({ _siteUrl: url }, function() {
+	PagesService.remove({ user: user, _siteUrl: url }, function() {
 		pagesRemoved = 1;
 	}, function(err) {
 		pagesRemoved = 0;
@@ -103,7 +110,7 @@ module.exports.clearPagesAndResourcesForSite = function(url, callback, errback) 
 		console.log('error trying to delete pages for url');
 	});
 
-	ResourcesService.remove({ _siteUrl: url }, function() {
+	ResourcesService.remove({ user: user, _siteUrl: url }, function() {
 		resourcesRemoved = 1;
 	}, function(err) {
 		resourcesRemoved = 0;
@@ -143,16 +150,19 @@ module.exports.clearPagesAndResourcesForSite = function(url, callback, errback) 
 	});
 };
 
-module.exports.updateSite = function(site, callback, errback) {
-	module.exports.clearPagesAndResourcesForSite(site.url, function() {
+module.exports.updateSite = function(user, site, callback, errback) {
+	console.log('updateSite: ', site);
+	module.exports.clearPagesAndResourcesForSite(user, site.url, function() {
 		console.log('should have dropped stuff for rest of site');
-		module.exports.saveSite(site, callback, errback);
+		module.exports.saveSite(user, site, callback, errback);
 	}, function(err) {
 		errback(err);
 	});
 };
 
-module.exports.unregisterSite = function(url, callback, errback) {
+module.exports.unregisterSite = function(user, url, callback, errback) {
+
+	console.log('unregisterSite: ', user, url);
 
     var pagesSaved = -1, 
 		resourcesSaved = -1, 
@@ -165,7 +175,7 @@ module.exports.unregisterSite = function(url, callback, errback) {
 		sitesErr;
 
 	// save pages to db
-	PagesService.remove({_siteUrl: url}, function(pages) {
+	PagesService.remove({_siteUrl: url, user: user}, function(pages) {
 		pages = pages;
 		pagesSaved = 1;
 	}, function(err) {
@@ -175,7 +185,7 @@ module.exports.unregisterSite = function(url, callback, errback) {
 	});
 
 	// save resources to db
-	ResourcesService.remove({_siteUrl: url}, function(resources) {
+	ResourcesService.remove({_siteUrl: url, user: user}, function(resources) {
 		resources = resources;
 		resourcesSaved = 1;
 	}, function(err) {
@@ -185,7 +195,7 @@ module.exports.unregisterSite = function(url, callback, errback) {
 	});
 
 	// save sites to db
-	SiteService.remove(url, function(site) {
+	SiteService.remove({ url: url, user: user }, function(site) {
 		site = site;
 		siteSaved = 1;
 	}, function(err) {

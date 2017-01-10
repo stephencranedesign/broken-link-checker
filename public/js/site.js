@@ -10,7 +10,7 @@ var siteInfo = (function($) {
 	info.on('click', function(e) {
 		var url = urlInput.val();
 		console.log('url: ', url);
-		$.get('/api/sites/findBrokenLinks/'+url, function(data) {
+		$.get('/api/'+USER+'/sites/findBrokenLinks/'+url, function(data) {
 			siteInfo = data;
 			console.log(siteInfo);
 		});
@@ -47,9 +47,23 @@ var siteInfo = (function($) {
 
 	crawlStart.on('click', function() {
 		var url = crawlInput.val();
-		$.post('/api/crawler/'+url+'/register', { initialProtocol: protocol.val(), initialPath: path.val(), initialPort: port.val(), interval: interval.val(), maxConcurrency: concurrency.val(), crawlFrequency: crawlFrequency.val(), maxDepth: maxDepth.val() }, function(data) {
-			console.log('crawl finished');
-		}, 'application/x-www-form-urlencoded');
+		api(function() {
+			$.ajax({
+			  type: "POST",
+			  url: '/api/'+USER+'/crawler/'+url+'/register',
+			  data: {
+				initialProtocol: protocol.val(), 
+				initialPath: path.val(), 
+				port: port.val(), 
+				interval: interval.val(), 
+				maxConcurrency: concurrency.val(), 
+				crawlFrequency: crawlFrequency.val(), 
+				maxDepth: maxDepth.val()
+			  },
+			  headers: { authorization: TOKEN },
+			  success: function(data) { console.log('crawl finished: ', data); }
+			});
+		});
 	});
 
 	/* list site */
@@ -59,7 +73,7 @@ var siteInfo = (function($) {
 
 	listStart.on('click', function() {
 		var url = listInput.val();
-		$.get('/api/sites/find/'+url, function(data) {
+		$.get('/api/'+USER+'/sites/find/'+url, function(data) {
 			console.log('Site Info: ', data);
 			var brokenLinks = data.brokenLinks.length;
 			list.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
@@ -73,7 +87,7 @@ var siteInfo = (function($) {
 
 	brokenLinksStart.on('click', function() {
 		var url = brokenLinksInput.val();
-		$.get('/api/resources/'+url+'/brokenLinks', function(data) {
+		$.get('/api/'+USER+'/resources/'+url+'/brokenLinks', function(data) {
 			console.log('brokenLinks Info: ', data);
 			var brokenLinks = data.brokenLinks.length;
 			brokenLinks.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
@@ -97,8 +111,13 @@ var siteInfo = (function($) {
 	deleteStart.on('click', function() {
 		var url = deleteInput.val();
 		console.log('url: ', url);
-		$.post('/api/crawler/'+url+'/unRegister', function(data) {
-			console.log('done', data);
+		api(function() {
+			$.ajax({
+			  type: "POST",
+			  url: '/api/'+USER+'/crawler/'+url+'/unRegister',
+			  headers: { authorization: TOKEN },
+			  success: function(data) { console.log('site unRegistered: ', data); }
+			});
 		});
 	});
 
@@ -111,9 +130,11 @@ var siteInfo = (function($) {
 		var host = updateInput.val();
 		var path = updateInputPath.val();
 		console.log('hi', host, path);
-		$.post('/api/crawler/updatePath', { host: host, path: path }, function(data) {
-			console.log('crawl finished');
-		}, 'application/x-www-form-urlencoded');
+		api(function() {
+			$.post('/api/'+USER+'/crawler/updatePath', { host: host, path: path, authenticate: TOKEN }, function(data) {
+				console.log('crawl finished');
+			}, 'application/x-www-form-urlencoded');
+		});
 	});
 
 	/* pages */
@@ -127,25 +148,17 @@ var siteInfo = (function($) {
 			path = pathInput.val();
 
 		if(path === "") {
-			$.get("/api/pages/"+host+"/list", function(data) {
-				console.log("pages data: ", data);
-				// var pages = [];
-				// var ul = $('#pages');
-				// data.forEach(function(o) {
-				// 	pages.push("<li>"+o.url+"</li>")
-				// });
-				// ul.html(pages.join(''));
+			api(function() {
+				$.get("/api/"+USER+"/pages/"+host+"/list", function(data) {
+					console.log("pages data: ", data);
+				});
 			});
 		}
 		else {
-			$.post("/api/pages/"+host+"/getPath", { path: path },function(data) {
-				console.log("pages data: ", data);
-				// var pages = [];
-				// var ul = $('#pages');
-				// data.forEach(function(o) {
-				// 	pages.push("<li>"+o.url+"</li>")
-				// });
-				// ul.html(pages.join(''));
+			api(function() {
+				$.post("/api/"+USER+"/pages/"+host+"/getPath", { path: path },function(data) {
+					console.log("pages data: ", data);
+				});
 			});
 		}
 	});
@@ -155,16 +168,102 @@ var siteInfo = (function($) {
 		resourcesButton = $('#resources-button');
 
 	resourcesButton.on('click', function() {
-		$.get("/api/resources/"+resourcesInput.val()+"/list", function(data) {
-			console.log("resources data: ", data);
-			// var resources = [];
-			// var ul = $('#resources');
-			// data.forEach(function(o) {
-			// 	resources.push("<li>"+o.url+"</li>")
-			// });
-			// ul.html(resources.join(''));
+		api(function() {
+			$.get("/api/"+USER+"/resources/"+resourcesInput.val()+"/list", function(data) {
+				console.log("resources data: ", data);
+			});
 		});
 	});
+
+	// var newusername = $('#newusername'),
+	// 	newpassword = $('#newpassword'),
+	// 	newuser = $('#newuser');
+
+	// newuser.on('click', function() {
+	// 	var user = newusername.val();
+	// 	var pass = newpassword.val();
+
+	// 	$.ajax({ 
+	// 		url: "/api/user/create", 
+	// 		type: "POST",
+	// 		data: {
+	// 			name: user, password: pass
+	// 		}, 
+	// 		success: function(data) {
+	// 			console.log('data: ', data);
+	// 		},
+	// 		error: function(err) {
+	// 			console.log('err: ', err);
+	// 		}
+	// 	});
+	// });
+
+	var username = $('#username');
+	var password = $('#password');
+	var login = $('#login');
+	var loginWrapper = $('#login-wrapper');
+	var loggedInStuff = $('#logged-in-stuff');
+
+	login.on('click', function(e) {
+		e.preventDefault();
+		var user = username.val();
+		var pass = password.val();
+
+		authenticate(user, pass, function(data) {
+			if(data.success) {
+				TOKEN = data.token;
+				USER = user;
+				console.log('logged in as: ', user);
+				logInState(true);
+			}
+			else alert(data.msg);
+		}, function(err) {
+			console.log('err: ', err);
+			alert(err.msg);
+		});
+	});
+
+	function logInState(val) {
+		if(val) {
+			loginWrapper.hide();
+			loggedInStuff.show();
+		}
+		else {
+			loginWrapper.show();
+			loggedInStuff.hide();
+		}
+	}
+
+	// user: "stephen" | pass: "password"
+	var TOKEN = null;
+	var USER = null;
+	function authenticate(user, pass, callback, errback) {
+		console.log('authenticate', user, pass);
+		$.ajax({
+		  type: "POST",
+		  url: '/api/authenticate',
+		  data: {
+			name: user, password: pass
+		  },
+		  success: callback,
+		  error: errback
+		});
+		// $.post('/api/authenticate', {
+		// 	name: user, password: pass
+		// }, 'application/x-www-form-urlencoded')
+		// .done(callback)
+		// .fail(errback);
+	};
+
+	function api(callback, errback) {
+		if(!TOKEN) {
+			alert('need to login..');
+			if(errback) errback();
+		}
+		else callback();
+	};
+
+	logInState(false);
 
 	return siteInfo;
 })(jQuery);

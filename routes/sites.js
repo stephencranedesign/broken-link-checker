@@ -3,6 +3,7 @@ var router = express.Router();
 var Sites = require('../services/sites.js');
 var scheduler = require("../custom-modules/scheduler.js");
 var CORS = require('../custom-modules/CORS');
+var AUTH = require('../custom-modules/authentication');
 
 var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
 
@@ -11,9 +12,10 @@ var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
     dont see a need for authentication on these..
 */
 
-router.get('/api/sites/list', function(req, res) {
-    console.log('sites: ');
-    Sites.list(function(items) {
+router.get('/api/:user/sites/list', function(req, res) {
+    var user = req.params.user;
+
+    Sites.list(user, function(items) {
         console.log('callback: ', items);
         res.json(items);
     }, function(err) {
@@ -21,10 +23,12 @@ router.get('/api/sites/list', function(req, res) {
     });
 });
 
-router.get('/api/sites/find/:host', function(req, res) {
+router.get('/api/:user/sites/find/:host', function(req, res) {
     var host = normalizeUrl(req.params.host);
+    var user = req.params.user;
+
     CORS.enable(res);
-    Sites.findSite(host, function(doc) {
+    Sites.findSite(user, host, function(doc) {
         res.json(doc);
     }, function(err) {
         console.log('err on delete: ', err);
@@ -32,11 +36,12 @@ router.get('/api/sites/find/:host', function(req, res) {
     });
 });
 
-router.get('/api/sites/findBrokenLinks/:host', function(req, res) {
+router.get('/api/:user/sites/findBrokenLinks/:host', function(req, res) {
     console.log('host: ', req.params.host);
     var host = normalizeUrl(req.params.host);
+    var user = req.params.user;
     
-    Sites.findBrokenLinks(host, function(doc) {
+    Sites.findBrokenLinks(user, host, function(doc) {
         console.log('find ', doc);
         res.json(doc);
     }, function(err) {
@@ -45,7 +50,9 @@ router.get('/api/sites/findBrokenLinks/:host', function(req, res) {
     });
 });
 
+AUTH.secure("/api/:user/sites/drop");
 router.get('/api/sites/drop', function(req, res) {
+
     Sites.drop(function() {
         res.json({message: "sites dropped"});
     }, function(err) {

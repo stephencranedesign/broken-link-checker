@@ -11,6 +11,7 @@ var SiteStub = function(site, callback) {
     this.crawlFrequency = site.crawlFrequency;
     this.lastCrawl = site.date || null;
     this.crawlOptions = site.crawlOptions;
+    this.user = site.user;
     this.timer = new Timer();
     this.callback = callback || function() {};
     this.killed = false;
@@ -47,7 +48,7 @@ SiteStub.prototype.stopTimer = function() {
 var registeredSites = {};
 var registerSite = function(site, saveToDb, callback, errback) {
     site = new SiteStub(site, site.callback);
-    registeredSites[site.url] = site;
+    registeredSites[site.user+"::"+site.url] = site;
 
     /*
         siteStub should only be saved to db if it was hit by the endpoint.
@@ -56,7 +57,7 @@ var registerSite = function(site, saveToDb, callback, errback) {
 
     // if( !saveToDb ) return callback(site);
 
-    SiteService.save(site, function(doc) {
+    SiteService.save(site.user, site, function(doc) {
         console.log("saved to db from registerSite");
         if(callback) callback(site);
     }, function(err) {
@@ -64,21 +65,20 @@ var registerSite = function(site, saveToDb, callback, errback) {
         if(errback) errback(err);
     });
 };
-function unRegisterSite(url, callback, errback) {
-    if( registeredSites[url] !== undefined ) {
+function unRegisterSite(user, url, callback, errback) {
+    if( isSiteRegistered(user,url) !== undefined ) {
         console.log('delete registered: ', url);
-        registeredSites[url].stopTimer();
-        delete registeredSites[url];
+        registeredSites[user+"::"+url].stopTimer();
+        delete registeredSites[user+"::"+url];
     }
-    console.log('unRegisterSite: ', url, registeredSites);
     
-    crawlerCtrl.unregisterSite(url, callback, errback);
+    crawlerCtrl.unregisterSite(user, url, callback, errback);
 
     // crawlerCtrl.clearPagesAndResourcesForSite();
 };
 
-function isSiteRegistered(url) {
-    return registeredSites.hasOwnProperty(url) ? true : false;
+function isSiteRegistered(user, url) {
+    return registeredSites.hasOwnProperty(user+"::"+url) ? true : false;
 }
 
 /*

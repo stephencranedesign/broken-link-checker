@@ -28,8 +28,8 @@ function MockQueueItem(baseUrl, path, status, referrer) {
 describe("Site api", function() {
 	describe("constructor", function() {
 		var instance
-		it('should create a fresh instance with url set to first parameter', function() {
-			instance = new Site("test.com", 300, {});
+		it('should create a fresh instance when user set to first parameter and host url as second parameter', function() {
+			instance = new Site(process.env.testUser, "test.com", 300, {});
 			instance.should.be.a('object');
 			instance["url"].should.be.equal("test.com");
 		});
@@ -37,7 +37,7 @@ describe("Site api", function() {
 
 	describe("_groupByPages", function() {
 		it("should filter .links array into pages object based on referrer", function() {
-			var instance = new Site("test.com", 300, {});
+			var instance = new Site(process.env.testUser, "test.com", 300, {});
 			instance.links = [
 
 				// home page
@@ -87,28 +87,22 @@ describe("Site api", function() {
 	});
 	
 	describe('_findWorstBrokenLinks', function() {
-		var instance = new Site("test.com", 300, {});
+		var instance = new Site(process.env.testUser, "test.com", 300, {});
 
 		instance.brokenResources = [];
 		
 		instance.brokenResources.push(new MockQueueItem("test.com", "/about.aspx", "failed", "/home.aspx"));
 		instance.brokenResources.push(new MockQueueItem("test.com", "/project.aspx", "failed"));
 		instance.brokenResources.push(new MockQueueItem("test.com", "/about.aspx", "failed", "/project.aspx"));
-		
-
-		console.log('instance: ', instance.brokenResources);
 
 		it("a new site should have no property worstBrokenLinks defined", function() {
 			should.not.exist(instance.worstOffenders);
 		});
 
-		console.log('boom');
-
 		it("sort the broken links array and return top 5 to worstOffenders array", function() {
 			
 			instance._findWorstBrokenLinks();
 
-			console.log('test: ', instance.worstOffenders);
 			should.exist(instance.worstOffenders);
 			instance.worstOffenders[0].path.should.equal("/about.aspx");
 			instance.worstOffenders[0].length.should.equal(2);
@@ -155,8 +149,6 @@ describe("OffendersList", function() {
 		it("should sort values of array by property provided from least to greatest if second property not passed true", function() {
 			list.sortByProp('prop');
 
-			console.log(list.array);
-
 			list.array[0].prop.should.equal(1);
 			list.array[1].prop.should.equal(2);
 			list.array[2].prop.should.equal(3);
@@ -165,8 +157,6 @@ describe("OffendersList", function() {
 
 		it("should sort values of array by property provided from greatest to least if second property passed true", function() {
 			list.sortByProp('prop', true);
-
-			console.log(list.array);
 
 			list.array[0].prop.should.equal(5);
 			list.array[1].prop.should.equal(3);

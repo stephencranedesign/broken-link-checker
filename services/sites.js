@@ -2,7 +2,7 @@ var Sites = require('../models/Sites.js');
 var mongoose = require('mongoose'); // for drop function
 var crawler = require('../custom-modules/crawler');
 
-function _create(site, callback, errback) {
+function _create(user, site, callback, errback) {
     Sites.create(
         { 
             url: site.url, 
@@ -16,13 +16,13 @@ function _create(site, callback, errback) {
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds,
+            user: user,
             totalPages: site.pages.length
         }, function(err, doc) {
             if (err) {
                 errback(err);
                 return;
             }
-            console.log('_create');
             callback(doc);
             // mongoose.disconnect();
             return;
@@ -30,10 +30,11 @@ function _create(site, callback, errback) {
     );
 }
 
-module.exports.save = function(site, callback, errback) {
+module.exports.save = function(user, site, callback, errback) {
     Sites.findOneAndUpdate(
         {
-            url: site.url
+            url: site.url,
+            user: user
         }, 
         { 
             // Resources: site.Resources, 
@@ -46,6 +47,7 @@ module.exports.save = function(site, callback, errback) {
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds,
+            user: user,
             totalPages: site.pages.length
         }, function(err, doc) {
             if(err) {
@@ -53,17 +55,18 @@ module.exports.save = function(site, callback, errback) {
                 return;
             }
 
-            if(doc === null) _create(site, callback, errback);
+            if(doc === null) _create(user, site, callback, errback);
             else callback(doc);
             // else mongoose.disconnect();
         }
     );
 };
 
-module.exports.updateLinkCount = function(site, callback, errback) {
+module.exports.updateLinkCount = function(user, site, callback, errback) {
     Sites.findOneAndUpdate(
         {
-            url: site.url
+            url: site.url,
+            user: user
         }, 
         { 
             // Resources: site.Resources, 
@@ -75,22 +78,23 @@ module.exports.updateLinkCount = function(site, callback, errback) {
             worstOffenders: site.worstOffenders,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
-            crawlDurationInSeconds: site.crawlDurationInSeconds
+            crawlDurationInSeconds: site.crawlDurationInSeconds,
+            user: user
         }, function(err, doc) {
             if(err) {
                 errback(err);
                 return;
             }
 
-            if(doc === null) _create(site, callback, errback);
+            if(doc === null) _create(user, site, callback, errback);
             else callback(doc);
             // else mongoose.disconnect();
         }
     );
 };
 
-module.exports.findLinksForSite = function(url, callback, errback) {
-    Sites.findOne({url: url}, 'url date downloadedLinks redirectedLinks').lean().exec(function(err, doc) {
+module.exports.findLinksForSite = function(user, url, callback, errback) {
+    Sites.findOne({url: url, user: user }, 'url date downloadedLinks redirectedLinks').lean().exec(function(err, doc) {
         if(err) {
             errback(err);
             return;
@@ -100,8 +104,8 @@ module.exports.findLinksForSite = function(url, callback, errback) {
     });
 };
 
-module.exports.findbrokenLinks = function(url, callback, errback) {
-    Sites.findOne({url: url}, 'url date brokenLinks' ,function(err, doc) {
+module.exports.findbrokenLinks = function(user, url, callback, errback) {
+    Sites.findOne({url: url, user: user}, 'url date brokenLinks' ,function(err, doc) {
         if(err) {
             errback(err);
             return;
@@ -111,8 +115,8 @@ module.exports.findbrokenLinks = function(url, callback, errback) {
     });
 };
 
-module.exports.findSite = function(url, callback, errback) {
-    Sites.findOne({url: url}, function(err, doc) {
+module.exports.findSite = function(user, url, callback, errback) {
+    Sites.findOne({url: url, user: user}, function(err, doc) {
         if(err) {
             errback(err);
             return;
@@ -125,8 +129,11 @@ module.exports.findSite = function(url, callback, errback) {
     });
 };
 
-module.exports.list = function(callback, errback) {
-    Sites.find(function(err, items) {
+module.exports.list = function(user, callback, errback) {
+    var query = { user: user };
+    if(user === 'all') query = {};
+    
+    Sites.find(query, function(err, items) {
         if (err) {
             errback(err);
             return;
@@ -136,10 +143,9 @@ module.exports.list = function(callback, errback) {
     });
 };
 
-module.exports.remove = function(path, callback, errback) {
-    console.log('remove: ', path);
-    if(path === null || path === 'all') {
-        Sites.remove(function(err, item) {
+module.exports.remove = function(query, callback, errback) {
+    if(query.url === null || query.url === 'all') {
+        Sites.remove({ user: query.user }, function(err, item) {
             if(err) {
                 callback(err);
                 return;
@@ -149,7 +155,7 @@ module.exports.remove = function(path, callback, errback) {
         });
     }
     else {
-        Sites.remove({url: path}, function(err, item) {
+        Sites.remove(query, function(err, item) {
             if(err) {
                 callback(err);
                 return;
@@ -160,13 +166,8 @@ module.exports.remove = function(path, callback, errback) {
     }
 };
 
-module.exports.drop = function(callback, errback) {
-    mongoose.connection.collections['sites'].drop( function(err) {
-        if(err) {
-            if(errback) errback(err);
-            return;
-        }
-
-        if(callback) callback();
+module.exports.drop = function(callback) {
+    Sites.remove(function(err, p){
+        callback(err);
     });
 };

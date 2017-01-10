@@ -12,27 +12,42 @@
 		</nav>
 	</header>
 	<main>
-		<h1>Query a site</h1>
+		<div id="login-wrapper">
+			<h2>login</h2>
+			<form>
+				<h3>Create a user</h3>
+				<input id="newusername" type="text" />
+				<input id="newpassword" type="text" />
+				<button id="newuser">New User</button>
 
-		<input type="text" id="listInput" value="cernecalcium.com">
-		<button id="listStart">get info</button>
-		<div id="list" class="list"></div>
+				<h3>Login</h3>
+				<input id="username" type="text" />
+				<input id="password" type="text" />
+				<button id="login">Login</button>
+			</form>
+		</div>
+		<div id="logged-in-stuff" style="display: none;">
+			<h1>Query a site</h1>
 
-		<input type="text" id="brokenLinksInput" value="cernecalcium.com">
-		<button id="brokenLinksStart">get broken links</button>
-		<div id="brokenLinks" class="brokenLinks"></div>
+			<input type="text" id="listInput" value="cernecalcium.com">
+			<button id="listStart">get info</button>
+			<div id="list" class="list"></div>
 
-		<h2>Pages</h2>
-		<input type="text" id="pages-input" placeholder="siteHost" />
-		<input type="text" id="path-input" placeholder="sitePath" />
-		<button id="pages-button">list pages</button>
-		<div id="pages"></div>
+			<input type="text" id="brokenLinksInput" value="cernecalcium.com">
+			<button id="brokenLinksStart">get broken links</button>
+			<div id="brokenLinks" class="brokenLinks"></div>
 
-		<h2>Resources</h2>
-		<input type="text" id="resources-input" />
-		<button id="resources-button">list resources</button>
-		<div id="resources"></div>
+			<h2>Pages</h2>
+			<input type="text" id="pages-input" placeholder="siteHost" />
+			<input type="text" id="path-input" placeholder="sitePath" />
+			<button id="pages-button">list pages</button>
+			<div id="pages"></div>
 
+			<h2>Resources</h2>
+			<input type="text" id="resources-input" />
+			<button id="resources-button">list resources</button>
+			<div id="resources"></div>
+		</div>
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 	<script src="/js/site.js"></script>

@@ -1,8 +1,8 @@
 var Resources = require('../models/Resources.js');
 var mongoose = require('mongoose'); // for drop function
 
-module.exports.findOneAndUpdate = function(resource, callback, errback) {
-	Resources.findOneAndUpdate({ _id: resource._id }, resource, { upsert: true }, function(err, doc) {
+module.exports.findOneAndUpdate = function(user, resource, callback, errback) {
+	Resources.findOneAndUpdate({ _id: resource._id, user: user }, resource, { upsert: true }, function(err, doc) {
 		if(err) {
 			errback(err);
 			return;
@@ -28,8 +28,8 @@ module.exports.insertMany = function(resources, callback, errback) {
 	});
 };
 
-module.exports.list = function(callback, errback) {
-	Resources.find(function(err, items) {
+module.exports.list = function(user, callback, errback) {
+	Resources.find({ user: user }, function(err, items) {
         if (err) {
             errback(err);
             return;
@@ -38,8 +38,8 @@ module.exports.list = function(callback, errback) {
     });
 };
 
-module.exports.listForSite = function(site, callback, errback) {
-	Resources.find({ _siteUrl: site }, function(err, items) {
+module.exports.listForSite = function(user, site, callback, errback) {
+	Resources.find({ _siteUrl: site, user: user }, function(err, items) {
         if (err) {
             errback(err);
             return;
@@ -49,7 +49,7 @@ module.exports.listForSite = function(site, callback, errback) {
 };
 
 module.exports.remove = function(query, callback, errback) {
-	Resources.find().remove(query, function(err) {
+	Resources.remove(query, function(err) {
 		if(err) {
 			errback(err);
 			return;
@@ -59,24 +59,17 @@ module.exports.remove = function(query, callback, errback) {
 	});
 };
 
-module.exports.drop = function(callback, errback) {
-    mongoose.connection.collections['resources'].drop( function(err) {
-        if(err) {
-            console.log('err: ', err);
-            errback(err);
-        }
-
-        callback();
+module.exports.drop = function(callback) {
+	Resources.remove(function(err, p){
+        callback(err);
     });
 };
 
-module.exports.getBrokenLinks = function(url, callback, errback) {
-	console.log('getBrokenLinks: ', url);
+module.exports.getBrokenLinks = function(user, url, callback, errback) {
 	Resources.find(
-		{ _siteUrl: url, isBroken: true }, 
+		{ _siteUrl: url, user: user, isBroken: true }, 
 		{ info: 1, _id: 0 }, 
 		function(err, docs) {
-			console.log('yo man..', url, docs);
 			if(err) {
 				errback(err);
 				return;
@@ -88,14 +81,11 @@ module.exports.getBrokenLinks = function(url, callback, errback) {
 };
 
 module.exports.nukeResourcesForPage = function(array, callback, errback) {
-	console.log('array: ', array);
 	var query = ["$or:["];
 	array.forEach(function(id) {
 		query.push("{_id:"+id+"},");
 	});
 	query.push("]");
-
-	console.log('query: ', query.join(""));
 
 	Resources.find().remove(query.join(""), function(err, doc) {
 		if(err) {

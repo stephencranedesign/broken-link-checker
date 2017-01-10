@@ -12,32 +12,48 @@
 		</nav>
 	</header>
 	<main>
-		<h2>Post a Site</h2>
-		
-		<input type="text" id="protocol" value="http">
-		<input type="text" id="crawlInput" value="cernecalcium.com">
-		<input type="text" id="path" value="/">
-		<input type="text" id="port" value="80">
-		<input type="text" id="interval" value="250">
-		<input type="text" id="maxConcurrency" value="1">
-		<input type="text" id="maxDepth" value="0">
-		<input type="text" id="crawlFrequency" value="300">
+		<div id="login-wrapper">
+			<h2>login</h2>
+			<form>
+				<h3>Create a user</h3>
+				<input id="newusername" type="text" />
+				<input id="newpassword" type="text" />
+				<button id="newuser">New User</button>
 
-		<button id="crawlStart">register a site</button>
+				<h3>Login</h3>
+				<input id="username" type="text" />
+				<input id="password" type="text" />
+				<button id="login">Login</button>
+			</form>
+		</div>
+		<div id="logged-in-stuff" style="display: none;">
 
-		<hr>
+			<h2>Post a Site</h2>
+			
+			<input type="text" id="protocol" value="http">
+			<input type="text" id="crawlInput" value="cernecalcium.com">
+			<input type="text" id="path" value="/">
+			<input type="text" id="port" value="80">
+			<input type="text" id="interval" value="250">
+			<input type="text" id="maxConcurrency" value="1">
+			<input type="text" id="maxDepth" value="0">
+			<input type="text" id="crawlFrequency" value="300">
 
-		<h2>Unregister a site</h2>
-		<input type="text" id="deleteInput" value="cernecalcium.com">
-		<button id="deleteStart">unregister site</button>
+			<button id="crawlStart">register a site</button>
 
-		<hr>
+			<hr>
 
-		<h2>Update a path</h2>
-		<input type="text" id="updateInput" value="cernecalcium.com">
-		<input type="text" id="updateInputPath" value="/contact-us.aspx">
-		<button id="updateStart">update path</button>
+			<h2>Unregister a site</h2>
+			<input type="text" id="deleteInput" value="cernecalcium.com">
+			<button id="deleteStart">unregister site</button>
 
+			<hr>
+
+			<h2>Update a path</h2>
+			<input type="text" id="updateInput" value="cernecalcium.com">
+			<input type="text" id="updateInputPath" value="/contact-us.aspx">
+			<button id="updateStart">update path</button>
+		</div>
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 	<script src="/js/site.js"></script>

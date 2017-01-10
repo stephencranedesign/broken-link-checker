@@ -8,7 +8,7 @@ var registeredSites = require('./scheduler.js').registeredSites;
 /*
     Description of the site. this is what we eventually send to Db to save info.
 */
-var Site = function(url, crawlFrequency, crawlOptions) {
+var Site = function(user, url, crawlFrequency, crawlOptions) {
     this.url = url;
 
     this.fetchTimeouts = [];
@@ -17,6 +17,7 @@ var Site = function(url, crawlFrequency, crawlOptions) {
     this.redirectedResources = [];
     this.brokenResources = [];
     this.downloadedResources = [];
+    this.user = user;
 
     this.crawlFrequency = crawlFrequency;
     this.crawlOptions = crawlOptions;
@@ -91,7 +92,7 @@ Site.prototype._processQueue = function() {
         // check if we've processed this link.
         if(processedResources.hasOwnProperty(queueItem.path)) return;
         var isBroken = this._isBrokenResource(queueItem);
-        array.push(new Resource(this.url, isBroken, queueItem));
+        array.push(new Resource(this.user, this.url, isBroken, queueItem));
 
         // only add to processedResources if it is not a broken link.
         if(!isBroken) processedResources[queueItem.path] = true;
@@ -194,7 +195,7 @@ Site.prototype._groupByPages = function() {
             page.resources.push(resource._id);
         }
         else { // new page
-            var page = new Page(this.url, fullUrl, path);
+            var page = new Page(this.user, this.url, fullUrl, path);
             page.resources.push(resource._id);
             pages[fullUrl] = page;
         }
@@ -217,15 +218,11 @@ Site.prototype._findWorstBrokenLinks = function() {
     var worstOffenders = new OffendersList();
     this.brokenResources.forEach(function(resource) {
         var indexOfResource = worstOffenders.isInArray('path', resource.info.path);
-        console.log('test2: ', indexOfResource);
         if(indexOfResource !== -1) worstOffenders.array[indexOfResource].length++;
         else worstOffenders.addItem(new Offender(resource.info.path));
     });
 
     worstOffenders.sortByProp('length', true);
-
-    console.log('worstOffenders: ', worstOffenders.array);
-
     this.worstOffenders = worstOffenders.array.slice(0,5);
 }; 
 
@@ -242,7 +239,6 @@ OffendersList.prototype.isInArray = function(prop, val) {
 };
 OffendersList.prototype.sortByProp = function(prop, back) {
     back = back || false;
-    console.log('back: ', back);
     this.array.sort(function(a,b) {
 
         // least to greatest
