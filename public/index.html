@@ -21,7 +21,8 @@
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 	<script>
-		$.get("/api/stephen/sites/list", function(data) {
+		$.get("/api/test/sites/list", function(data) {
+			console.log('data: ', data);
 			var sites = [];
 			var ul = $('#sites');
 			data.forEach(function(o) {

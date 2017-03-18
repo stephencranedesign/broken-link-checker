@@ -1,15 +1,14 @@
 var Site = require('./Site.js').Site;
 var SiteStatus = require('./Site.js').SiteStatus;
 var Resource = require('./Site.js').Resource;
-var loopObj = require('./utils.js').loopObj;
 var SiteService = require("../services/sites.js");
 var PagesService = require("../services/pages.js");
 var ResourcesService = require("../services/resources.js");
 var BrokenLinkCrawler = require('./simple-crawler-extensions.js').BrokenLinkCrawler;
 
 var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
-
-var currCrawls = {};
+var currCrawls = require("../custom-modules/CurrCrawls").currCrawls;
+var scheduler = require('./scheduler');
 
 
 
@@ -32,49 +31,26 @@ function crawl(user, host, config, onComplete) {
     var host = host;
     var myCrawler = makeCrawler(host, config);
     var crawlFrequency = config.crawlFrequency || 10080; // 7 days.
+    var site;
 
-    var site = new Site(user, host, crawlFrequency, config); 
-    var siteStatus = new SiteStatus(config.crawlType);
+    site = scheduler.getRegisteredSite(user, host);
 
-    currCrawls[user+host] = siteStatus;
+    console.log('site: ', site);
+
+    // currCrawls[user+"::"+host] = site;
+    currCrawls.add(user, host, site, myCrawler);
+
+    console.log('currCrawls::: ', currCrawls);
 
     myCrawler.on('crawlstart', function() { 
         site.crawlStarted();
         console.log('start'); 
     });
 
-    /* 
-        load in resources from other domains but dont crawl their whole site.
-
-        fetch condition that returns false if queueItem.host is the same as referrerQueueItem.host, 
-        unless they both equal crawler.host 
-    */
-    // myCrawler.addFetchCondition(function(queueItem, referrerQueueItem) {
-    //     console.log('addFetchCondition 1: ', queueItem.host, referrerQueueItem.host, myCrawler.host, ' | ', referrerQueueItem.host != myCrawler.host);
-    //     // if(queueItem.host === referrerQueueItem.host) {
-    //     //     if(queueItem.host === myCrawler.host && referrerQueueItem.host === myCrawler.host) return true;
-    //     //     return false;
-    //     // }
-
-    //     // referrer doesn't equal the host site.
-    //     // return referrerQueueItem.host != myCrawler.host ? false : true;
-    // });
-
     myCrawler.addFetchCondition(function(queueItem, referrerQueueItem) {
         console.log('addFetchCondition 2', myCrawler.host);
         console.log('queueItem: ', queueItem);
         console.log('referrerQueueItem: ', referrerQueueItem);
-
-        // return referrerQueueItem.host != myCrawler.host ? false : true;
-
-        // console.log('requested from different site: ', referrerQueueItem.host != myCrawler.host);
-
-        // bad protocol
-        // if(referrerQueueItem.protocol === "https" && queueItem.protocol != "https") {
-        //     console.log(queueItem, referrerQueueItem);
-        //     throw new Error('mixed media');
-        //     queueItem.badProtocol = true;
-        // }
 
         // requesting resource from same domain as page resource was found on.
         if(queueItem.host === referrerQueueItem.host) {
@@ -110,7 +86,7 @@ function crawl(user, host, config, onComplete) {
     });
 
     myCrawler.on('fetchheaders', function(queueItem, responseObject) {
-        siteStatus.updateProcessResources();
+        site.status.updateProcessResources();
         myCrawler.processHeader(responseObject);
     });
 
@@ -120,14 +96,16 @@ function crawl(user, host, config, onComplete) {
 
     myCrawler.on('discoverycomplete', function(queueItem, resources) {
         console.log('discoverycomplete: ', resources);
-        siteStatus.updateTotalResources(myCrawler.queue.length);
+        site.status.updateTotalResources(myCrawler.queue.length);
     });
 
     myCrawler.on('complete', function() {
         site.crawlFinished();
+        scheduler.updateRegisteredSite(site);
         if(isInUpdateQueue(site.url)) removeFromUpdateQueue(site);
         onComplete(site);
-        delete currCrawls[user+host];
+        // delete currCrawls[user+"::"+host];
+        currCrawls.delete(user, host);
     });
 
     myCrawler.start();
@@ -156,21 +134,6 @@ function processHeader() {
         // successfully downloaded
         else if(responseObject.statusCode > 199 && responseObject.statusCode < 300) crawler.goodLinkFound(responseObject);
     };
-};
-
-function isCrawling(user, url) {
-    return currCrawls.hasOwnProperty(user+url) ? true : false;
-};
-
-/*
-    returns number of sites currently indexing.
-*/
-function isIdle() {
-    var idle = true;
-    loopObj(currCrawls, function() {
-        idle = false;
-    });
-    return idle;
 };
 
 /* 
@@ -249,8 +212,8 @@ function updatePage(user, host, path, callback, errback) {
                 - unitypoint takes a day to run.. I think i'd want to run the updatePage even if the full site is being crawled.
                 - maybe I add a timestamp to every page? then when full site is crawled, i do a check between what was just crawled and what is in the database. If a page in the database has a more recent time stamp then what is in the crawl, use that.
     */
-    if(isCrawling(user, host)) {
-        var siteStatus = currCrawls[user+host];
+    if(currCrawls.isCrawlingSite(user, host)) {
+        var siteStatus = currCrawls.getStatus(user, host);
         if(siteStatus.crawlType === 'full-site') return;
     }
 
@@ -299,8 +262,6 @@ function setUpdatesNeededForPage(site) {
 };
 
 module.exports.currCrawls = currCrawls;
-module.exports.isCrawling = isCrawling;
 module.exports.crawl = crawl;
-module.exports.isIdle = isIdle;
 module.exports.updatePage = updatePage;
 

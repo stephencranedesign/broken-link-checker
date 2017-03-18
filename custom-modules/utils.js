@@ -38,6 +38,7 @@ module.exports.capDecimals = function(num, duration) {
 };
 
 module.exports.normalizeUrl = function (url) {
+	if(url === undefined) throw new Error('url needs to be a string');
     // regex to normalize entries somehow?
     var clean = url.replace('http://', '').replace('https://', '').replace('www.', '');
     return "www."+clean;

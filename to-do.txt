@@ -1,3 +1,34 @@
+1) ensure authentication in place [x]
+2) /update-path []
+3) picks up broken links to outside domains []
+	- if base url is bad, I'm not sure how to diagnose that..
+	- works as long as status code returned by site is > 399.
+4) picks up broken resources (imgs / other stuff) to outside domains []
+	- youtube responds 200 to bad resources :(
+	- Vimeo sends good status codes.
+5) should be able to scan "somesite.bluecompass.com" but not "someothersite.bluecompass.com" or "bluecompass.com" [] 
+	- do later if at all. We dont run seo toolkit till after launch anyway to diagnose broken links.
+6) add ability to whitelist urls. When a broken link is grabbed, we should tell the user to check and make sure it isn't broken. give them an ability to say it is not broken and then not show that url again.. []
+	- mechanism in place. just need to verify it works.
+	- how to get at Site while it is crawling to trigger addWhiteList function?
+
+	- when url hit:
+		- change resources in db that are flagged as broken for that url to be notbroken.
+		- recalc brokenLinks and update the site broken link count.
+		- store that to crawler config so that site scheduler can use that to create a new instance.
+
+7) Is it better to use that brokenLinks package that was recently published?
+
+8) why is it running so slow?
+	- figure out how to track requests and make sure I'm not making more requests than i need to.
+
+9) unify how callbacks / errbacks are built.
+8) !! Resources are not getting nuked before new ones added.
+10) place top 20 worst offenders up on Site.
+
+
+*** OLD ***
+
 1) come up with a way to search and remove links from queue that are not broken when we receive info back from header to tell us if a link is good or broken. If it is good, it doesn't matter where it is on the site so we can make a blacklist of sites to not add to the queue and a way to purge earlier enteries of it.
 
 	- this could actually be a big performance help on unitypoint-like sites.

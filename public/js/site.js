@@ -137,6 +137,26 @@ var siteInfo = (function($) {
 		});
 	});
 
+	/* white list */
+	var whiteListBtn = $('#whiteListBtn'),
+		whiteListHost = $('#whiteListHost'),
+		whiteListUrl = $('#whiteListUrl');
+
+	whiteListBtn.on('click', function() {
+		api(function() {
+			$.ajax({
+			  type: "POST",
+			  url: '/api/'+USER+'/resources/whitelist',
+			  data: {
+				host: whiteListHost.val(),
+				urls: whiteListUrl.val()
+			  },
+			  headers: { authorization: TOKEN },
+			  success: function(data) { console.log('whitelist good: ', data); }
+			});
+		});
+	});
+
 	/* pages */
 	var pagesInput = $('#pages-input'),
 		pathInput = $('#path-input'),
@@ -175,28 +195,28 @@ var siteInfo = (function($) {
 		});
 	});
 
-	// var newusername = $('#newusername'),
-	// 	newpassword = $('#newpassword'),
-	// 	newuser = $('#newuser');
+	var newusername = $('#newusername'),
+		newpassword = $('#newpassword'),
+		newuser = $('#newuser');
 
-	// newuser.on('click', function() {
-	// 	var user = newusername.val();
-	// 	var pass = newpassword.val();
+	newuser.on('click', function() {
+		var user = newusername.val();
+		var pass = newpassword.val();
 
-	// 	$.ajax({ 
-	// 		url: "/api/user/create", 
-	// 		type: "POST",
-	// 		data: {
-	// 			name: user, password: pass
-	// 		}, 
-	// 		success: function(data) {
-	// 			console.log('data: ', data);
-	// 		},
-	// 		error: function(err) {
-	// 			console.log('err: ', err);
-	// 		}
-	// 	});
-	// });
+		$.ajax({ 
+			url: "/api/user/create", 
+			type: "POST",
+			data: {
+				name: user, password: pass
+			}, 
+			success: function(data) {
+				console.log('data: ', data);
+			},
+			error: function(err) {
+				console.log('err: ', err);
+			}
+		});
+	});
 
 	var username = $('#username');
 	var password = $('#password');

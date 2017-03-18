@@ -3,26 +3,32 @@ var chaiAsPromised = require("chai-as-promised");
 var Site = require("../custom-modules/Site.js").Site;
 var OffendersList = require("../custom-modules/Site.js").OffendersList;
 var asyncTimeout = require("./test-utils.js").asyncTimeout;
+var Resource = require("../custom-modules/Resource");
 
 var should = chai.should();
 
 chai.use(chaiAsPromised);
 
 function MockQueueItem(baseUrl, path, status, referrer) {
-	this.info = {
-		url: baseUrl+path,
-		protocol: "http",
-		host: "host",
-		port: "8080",
-		path: path,
-		uriPath:  "uriPath",
-		depth: 0,
-		fetched: true,
-		status: status,
-		stateData: {}
-	};
-	
-	if(referrer) this.info.referrer = referrer;
+	this.url = baseUrl+path;
+	this.protocol = "http";
+	this.host = "host";
+	this.port = "8080";
+	this.path = path;
+	this.uriPath =  "uriPath";
+	this.depth = 0;
+	this.fetched = true;
+	this.status = status;
+	this.stateData = {};
+
+	if(referrer) this.referrer = referrer;
+
+	return this;
+}
+
+function MockResource(baseUrl, path, status, referrer) {
+	var queueItem = new MockQueueItem(baseUrl, path, status, referrer);
+	return new Resource(process.env.testUser, process.env.testHost, false, queueItem);
 }
 
 describe("Site api", function() {
@@ -41,45 +47,45 @@ describe("Site api", function() {
 			instance.links = [
 
 				// home page
-				new MockQueueItem("test.com", "/about.aspx", "downloaded"),
-				new MockQueueItem("test.com", "/about.aspx", "downloaded"),
-				new MockQueueItem("test.com", "/contact.aspx", "downloaded"),
-				new MockQueueItem("test.com", "/work.aspx", "downloaded"),
-				new MockQueueItem("test.com", "/blog.aspx", "downloaded"),
-				new MockQueueItem("test.com", "/news.aspx", "downloaded"),
+				MockResource("test.com", "/about.aspx", "downloaded"),
+				MockResource("test.com", "/about.aspx", "downloaded"),
+				MockResource("test.com", "/contact.aspx", "downloaded"),
+				MockResource("test.com", "/work.aspx", "downloaded"),
+				MockResource("test.com", "/blog.aspx", "downloaded"),
+				MockResource("test.com", "/news.aspx", "downloaded"),
 
 				// about page
-				new MockQueueItem("test.com", "/contact.aspx", "downloaded", "/about.aspx"),
-				new MockQueueItem("test.com", "/contact.aspx", "downloaded", "/about.aspx"),
-				new MockQueueItem("test.com", "/work.aspx", "downloaded", "/about.aspx"),
-				new MockQueueItem("test.com", "/blog.aspx", "downloaded", "/about.aspx"),
-				new MockQueueItem("test.com", "/news.aspx", "downloaded", "/about.aspx"),
+				MockResource("test.com", "/contact.aspx", "downloaded", "/about.aspx"),
+				MockResource("test.com", "/contact.aspx", "downloaded", "/about.aspx"),
+				MockResource("test.com", "/work.aspx", "downloaded", "/about.aspx"),
+				MockResource("test.com", "/blog.aspx", "downloaded", "/about.aspx"),
+				MockResource("test.com", "/news.aspx", "downloaded", "/about.aspx"),
 
 				// contact page
-				new MockQueueItem("test.com", "/about.aspx", "downloaded", "/contact.aspx"),
-				new MockQueueItem("test.com", "/work.aspx", "downloaded", "/contact.aspx"),
-				new MockQueueItem("test.com", "/blog.aspx", "downloaded", "/contact.aspx"),
-				new MockQueueItem("test.com", "/news.aspx", "downloaded", "/contact.aspx"),
+				MockResource("test.com", "/about.aspx", "downloaded", "/contact.aspx"),
+				MockResource("test.com", "/work.aspx", "downloaded", "/contact.aspx"),
+				MockResource("test.com", "/blog.aspx", "downloaded", "/contact.aspx"),
+				MockResource("test.com", "/news.aspx", "downloaded", "/contact.aspx"),
 
 				// work page
-				new MockQueueItem("test.com", "/about.aspx", "downloaded", "/work.aspx"),
-				new MockQueueItem("test.com", "/contact.aspx", "downloaded", "/work.aspx"),
-				new MockQueueItem("test.com", "/blog.aspx", "downloaded", "/work.aspx"),
-				new MockQueueItem("test.com", "/news.aspx", "downloaded", "/work.aspx"),
+				MockResource("test.com", "/about.aspx", "downloaded", "/work.aspx"),
+				MockResource("test.com", "/contact.aspx", "downloaded", "/work.aspx"),
+				MockResource("test.com", "/blog.aspx", "downloaded", "/work.aspx"),
+				MockResource("test.com", "/news.aspx", "downloaded", "/work.aspx"),
 
 				// blog page
-				new MockQueueItem("test.com", "/about.aspx", "downloaded", "/blog.aspx"),
-				new MockQueueItem("test.com", "/contact.aspx", "downloaded", "/blog.aspx"),
-				new MockQueueItem("test.com", "/work.aspx", "downloaded", "/blog.aspx"),
-				new MockQueueItem("test.com", "/news.aspx", "downloaded", "/blog.aspx"),
+				MockResource("test.com", "/about.aspx", "downloaded", "/blog.aspx"),
+				MockResource("test.com", "/contact.aspx", "downloaded", "/blog.aspx"),
+				MockResource("test.com", "/work.aspx", "downloaded", "/blog.aspx"),
+				MockResource("test.com", "/news.aspx", "downloaded", "/blog.aspx"),
 
 				// news page
-				new MockQueueItem("test.com", "/about.aspx", "downloaded", "/news.aspx"),
-				new MockQueueItem("test.com", "/contact.aspx", "downloaded", "/news.aspx"),
-				new MockQueueItem("test.com", "/work.aspx", "downloaded", "/news.aspx"),
-				new MockQueueItem("test.com", "/blog.aspx", "downloaded", "/news.aspx"),
+				MockResource("test.com", "/about.aspx", "downloaded", "/news.aspx"),
+				MockResource("test.com", "/contact.aspx", "downloaded", "/news.aspx"),
+				MockResource("test.com", "/work.aspx", "downloaded", "/news.aspx"),
+				MockResource("test.com", "/blog.aspx", "downloaded", "/news.aspx"),
 
-				new MockQueueItem("test.com", "/news-2.aspx", "downloaded", "/about.aspx"),
+				MockResource("test.com", "/news-2.aspx", "downloaded", "/about.aspx"),
 			];
 
 			instance._groupByPages();
@@ -91,24 +97,99 @@ describe("Site api", function() {
 
 		instance.brokenResources = [];
 		
-		instance.brokenResources.push(new MockQueueItem("test.com", "/about.aspx", "failed", "/home.aspx"));
-		instance.brokenResources.push(new MockQueueItem("test.com", "/project.aspx", "failed"));
-		instance.brokenResources.push(new MockQueueItem("test.com", "/about.aspx", "failed", "/project.aspx"));
+		instance.brokenResources.push(MockResource("test.com", "/about.aspx", "failed", "/home.aspx"));
+		instance.brokenResources.push(MockResource("test.com", "/project.aspx", "failed"));
+		instance.brokenResources.push(MockResource("test.com", "/about.aspx", "failed", "/project.aspx"));
 
 		it("a new site should have no property worstBrokenLinks defined", function() {
-			should.not.exist(instance.worstOffenders);
+			should.equal(instance.worstOffenders, undefined);
 		});
 
 		it("sort the broken links array and return top 5 to worstOffenders array", function() {
 			
 			instance._findWorstBrokenLinks();
 
-			should.exist(instance.worstOffenders);
-			instance.worstOffenders[0].path.should.equal("/about.aspx");
+			console.log('est: ', instance.worstOffenders);
+			should.not.equal(instance.worstOffenders, undefined);
+			instance.worstOffenders[0].url.should.equal(instance.url + "/about.aspx");
 			instance.worstOffenders[0].length.should.equal(2);
-			instance.worstOffenders[1].path.should.equal("/project.aspx");
+			instance.worstOffenders[1].url.should.equal(instance.url + "/project.aspx");
 		})
-	})
+	});
+
+	describe("_isWhiteListed", function() {
+		var instance = new Site(process.env.testUser, "test.com", 300, {});
+		instance.whitelistedUrls = ["www.google.com"];
+
+		it("should return true if parameter passed is in whitelistedUrls array", function() {
+			var result = instance._isWhiteListed("www.google.com");
+			result.should.be.equal(true);
+		});
+
+		it("should return false if parameter passed is not in whitelistedUrls array", function() {
+			var result = instance._isWhiteListed("www.bluecompass.com");
+			result.should.be.equal(false);
+		});
+	});
+
+	describe("whiteListAddUrl", function() {
+		var instance = new Site(process.env.testUser, "test.com", 300, {});
+
+		it("should add passed string paramter to whitelistedUrls array", function() {
+			instance.whiteListAddUrl("www.google.com");
+
+			instance.whitelistedUrls.length.should.equal(1);
+		});
+
+		it("should concat passed array paramter to whitelistedUrls array", function() {
+			instance.whiteListAddUrl(["www.bluecompass.com", "www.facebook.com"]);
+
+			instance.whitelistedUrls.length.should.equal(3);
+		});
+
+		it("should keep whitelistedUrls unique", function() {
+			instance.whiteListAddUrl("www.google.com");
+			instance.whitelistedUrls.length.should.equal(3);
+
+			instance.whiteListAddUrl(["www.bluecompass.com", "www.facebook.com"]);
+			instance.whitelistedUrls.length.should.equal(3);
+		});
+	});
+
+	describe("_isBrokenResource", function() {
+		var instance = new Site(process.env.testUser, "test.com", 300, {});
+
+		var resourceFailed = new MockQueueItem("test.com", "/about.aspx", "failed");
+		var resourceNotFound = new MockQueueItem("test.com", "/about2.aspx", "notfound");
+
+		console.log("resourceFailed: ", resourceFailed);
+		console.log("resourceNotFound: ", resourceNotFound);
+
+		console.log("instance.whitelistedUrls: ", instance.whitelistedUrls);
+
+		it("should return true if passed resource.url has not been added to whitelistedUrls array and resource.status is failed", function() {
+			var result = instance._isBrokenResource(resourceFailed);
+			result.should.be.true;
+		});
+
+		it("should return true if passed resource.url has not been added to whitelistedUrls array and resource.status is notfound", function() {
+			var result = instance._isBrokenResource(resourceNotFound);
+			result.should.be.true;
+		});
+		
+		it("should return false if passed resource.url has been added to whitelistedUrls array and resource.status is failed", function() {
+			instance.whiteListAddUrl("test.com/about.aspx");
+			instance.whiteListAddUrl("test.com/about2.aspx");
+
+			var result = instance._isBrokenResource(resourceFailed);
+			result.should.be.false;
+		});
+
+		it("should return false if passed resource.url has been added to whitelistedUrls array and resource.status is notfound", function() {
+			var result = instance._isBrokenResource(resourceNotFound);
+			result.should.be.false;
+		});
+	});
 });
 
 describe("OffendersList", function() {

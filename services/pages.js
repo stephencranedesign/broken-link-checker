@@ -12,25 +12,26 @@ module.exports.findOneAndUpdate = function(user, page, callback, errback) {
 	});
 };
 
-module.exports.insertMany = function(pages, callback, errback) {
-	Pages.insertMany(pages, function(err, docs) {
-		if(err) {
-			errback(err);
-			return;
-		}
+module.exports.insertMany = function(pages) {
+	return new Promise(function(resolve, reject) {
+		Pages.insertMany(pages, function(err, docs) {
+			if(err) {
+				reject(err);
+				return;
+			}
 
-		callback(docs);
+			resolve(docs);
+		});
 	});
 };
 
-module.exports.list = function(user, callback, errback) {
-	Pages.find({ user: user }, function(err, items) {
+module.exports.list = function(user, url, callback, errback) {
+	Pages.find({ user: user, _siteUrl: url }, function(err, items) {
         if (err) {
             errback(err);
             return;
         }
         callback(items);
-        // mongoose.disconnect();
     });
 };
 

@@ -4,6 +4,7 @@ var Page = require('./Page');
 var Resource = require('./Resource');
 var ObjectID = require('mongodb').ObjectID;
 var registeredSites = require('./scheduler.js').registeredSites;
+var TimerWrapper = require('./timerWrapper.js');
 
 /*
     Description of the site. this is what we eventually send to Db to save info.
@@ -17,12 +18,18 @@ var Site = function(user, url, crawlFrequency, crawlOptions) {
     this.redirectedResources = [];
     this.brokenResources = [];
     this.downloadedResources = [];
+    this.whitelistedUrls = crawlOptions.hasOwnProperty('whitelistedUrls') ?  crawlOptions.whitelistedUrls : [];
     this.user = user;
 
     this.crawlFrequency = crawlFrequency;
     this.crawlOptions = crawlOptions;
     this.processedGoodResources = {};
     this.crawlType = crawlOptions.hasOwnProperty('crawlType') ?  crawlOptions.crawlType : 'full-site';
+
+    this.status = new SiteStatus(this.crawlType);
+    this.timer = new TimerWrapper(crawlFrequency);
+
+    console.log('site created: ', this.whitelistedUrls);
 };
 Site.prototype.fetchStart = function(queueItem) { 
     console.log('fetchStart: ', queueItem);
@@ -33,6 +40,14 @@ Site.prototype.fetchTimeout = function(queueItem) {
 };
 Site.prototype.crawlStarted = function() {
     this._logStage('crawlStarted');
+
+    this.Resources = [];
+    this.downloadedResources = [];
+    this.brokenResources = [];
+    this.redirectedResources = [];
+    this.fetchTimeouts = [];
+    this.processedGoodResources = {};
+    
     if(this.crawlType === 'page-update') return;
     this.crawlStartTime = Date.now();
 };
@@ -55,20 +70,62 @@ Site.prototype.crawlFinished = function(type) {
 };
 
 /*
-    look at resource/stateData to determine if the resource is broken.
-*/ 
-Site.prototype._isBrokenResource = function(resource) {
-    var brokenResource = false;
-    if(resource.status === "notfound" || resource.status === "failed") brokenResource = true;
+    compares url with whitelisted urls.
+    @return bool
+*/
+Site.prototype._isWhiteListed = function(url) {
+    var isWhiteListed = false;
+    if( this.whitelistedUrls.indexOf(url) > -1 ) isWhiteListed = true;
 
-    console.log('crawlType: ', this.crawlType);
+    console.log("_isWhiteListed: ", isWhiteListed, url, this.whitelistedUrls.indexOf(url));
+    return isWhiteListed;
+};
+
+/*
+    pass either an array of urls or a single url to add to whiteList array.
+    @return void
+*/
+Site.prototype.whiteListAddUrl = function(url) {
+    if(typeof url.forEach === "function") { // check to see if it's an array.
+        var array = [];
+
+        // ensure whitelist stays unique.
+        url.forEach(function(val) {
+            if(array.indexOf(val) > -1) return;
+            if(this.whitelistedUrls.indexOf(val) > -1) return;
+            array.push(val);
+        }.bind(this));
+
+        this.whitelistedUrls = this.whitelistedUrls.concat(array);
+        this.crawlOptions.whitelistedUrls = this.whitelistedUrls;
+    }
+    else {
+
+        // ensure whitelist stays unique.
+        if(this.whitelistedUrls.indexOf(url) > -1) return;
+        this.whitelistedUrls.push(url);
+        this.crawlOptions.whitelistedUrls = this.whitelistedUrls;
+    }
+};
+
+/*
+    look at resource/stateData to determine if the resource is broken.
+    @return bool
+*/ 
+Site.prototype._isBrokenResource = function(queueItem) {
+    var brokenResource = false;
+
+    if(this._isWhiteListed(queueItem.url)) return brokenResource;
+
+    if(queueItem.status === "notfound" || queueItem.status === "failed") brokenResource = true;
+
     if( this.crawlType === "full-site" ) {
         // 404 error page
-        if(resource.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(resource.stateData.headers.location)) brokenResource = true;
+        if(queueItem.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(queueItem.stateData.headers.location)) brokenResource = true;
     }
     else {
         // 404 error page
-        if(resource.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(resource.locationFromHeader)) brokenResource = true;
+        if(queueItem.status === "redirected" && /\/404\.aspx\?aspxerrorpath=\//.test(queueItem.locationFromHeader)) brokenResource = true;
     }
 
     // if(resource.badProtocol) {
@@ -83,6 +140,7 @@ Site.prototype._isBrokenResource = function(resource) {
     weed out duplicate good links in queue and assign it to resources array.
 */
 Site.prototype._processQueue = function() {
+    console.log('_processQueue: ');
     var processedResources = {};
     var array = [];
     this.queue.forEach(function(queueItem) {
@@ -215,19 +273,38 @@ Site.prototype._getPathForResource = function(url) {
     - looks through this.brokenResources array and finds the most frequent offenders
 */
 Site.prototype._findWorstBrokenLinks = function() {
+    console.log('_findWorstBrokenLinks: ', this.brokenResources);
     var worstOffenders = new OffendersList();
     this.brokenResources.forEach(function(resource) {
-        var indexOfResource = worstOffenders.isInArray('path', resource.info.path);
+        console.log('_findWorstBrokenLinks: ', resource);
+        var indexOfResource = worstOffenders.isInArray('url', resource.info.url);
         if(indexOfResource !== -1) worstOffenders.array[indexOfResource].length++;
-        else worstOffenders.addItem(new Offender(resource.info.path));
+        else worstOffenders.addItem(new Offender(resource.info.url));
     });
 
     worstOffenders.sortByProp('length', true);
     this.worstOffenders = worstOffenders.array.slice(0,5);
 }; 
 
-var Offender = function(path) {
-    this.path = path;
+/*
+    - grabs fills the site object with all the info the sitesService.save needs in order to save it to the db.
+*/
+Site.prototype.makeStub = function() {
+    this.brokenResources = [];
+    this.date = new Date().toLocaleString();
+    this.crawlDurationInSeconds = null;
+    this.Resources = [null];
+    this.downloadedResources = [null];
+    this.brokenResources = [null];
+    this.redirectedResources = [null];
+    this.fetchTimeouts = [null];
+    this.pages = [];
+
+    return this;
+};
+
+var Offender = function(url) {
+    this.url = url;
     this.length = 1;
 }
 
@@ -260,6 +337,7 @@ OffendersList.prototype.addItem = function(obj) {
 
 /*
     Snap shot of site crawling progress. Stored on server and given to client when status is requested.
+    - combine this into Site.
 */
 var SiteStatus = function(crawlType) {
     this.totalResources = 0;
@@ -280,5 +358,4 @@ SiteStatus.prototype.updatePercentComplete = function() {
 };
 
 module.exports.Site = Site;
-module.exports.SiteStatus = SiteStatus;
 module.exports.OffendersList = OffendersList;

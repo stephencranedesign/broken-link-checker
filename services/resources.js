@@ -12,24 +12,45 @@ module.exports.findOneAndUpdate = function(user, resource, callback, errback) {
 	});
 };
 
-module.exports.insertMany = function(resources, callback, errback) {
-	resources.forEach(function(resource) {
-		console.log("status: ", resource.info.status);
-		if(resource.info.status === "failed" || resource.info.status === "notfound") console.log("***brokenResource: ", resource);
-	});
-	Resources.insertMany(resources, function(err, docs) {
+/* update */
+module.exports.update = function(find, set, callback) {
+	Resources.update(find, set, function(err, result) {
 		if(err) {
-			if(errback) errback(err);
+			callback(err);
 			return;
-		}
+		};
 
-		console.log("Resources | insertMany");
-		 if(callback) callback(docs);
+		callback(null, result);
 	});
 };
 
-module.exports.list = function(user, callback, errback) {
-	Resources.find({ user: user }, function(err, items) {
+module.exports.updateMany = function(filter, update, callback) {
+	Resources.collection.updateMany(filter, update, function(err, result) {
+	  	if(err) {
+	  		callback(err);
+	  		return;
+	  	}
+
+	  	callback(null, result);
+  });
+};
+
+module.exports.insertMany = function(resources, callback, errback) {
+	return new Promise(function(resolve, reject) {
+		Resources.insertMany(resources, function(err, docs) {
+			if(err) {
+				reject(err);
+				return;
+			}
+
+			console.log("Resources | insertMany");
+			resolve(docs);
+		});
+	});
+};
+
+module.exports.list = function(user, url, callback, errback) {
+	Resources.find({ user: user, _siteUrl: url }, function(err, items) {
         if (err) {
             errback(err);
             return;
@@ -95,4 +116,10 @@ module.exports.nukeResourcesForPage = function(array, callback, errback) {
 
 		callback(doc);
 	});
+};
+
+module.exports.drop = function(callback) {
+    Resources.remove(function(err, p){
+        callback(err);
+    });
 };

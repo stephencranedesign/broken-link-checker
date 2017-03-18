@@ -41,14 +41,5 @@ router.post("/api/:user/pages/:host/delete/:path", function() {
 
 });
 
-AUTH.secure("/api/:user/pages/drop");
-router.get('/api/pages/drop', function(req, res) {
-
-    PagesService.drop(function() {
-        res.json({message: "pages dropped"});
-    }, function(err) {
-        res.status(400).json(err);
-    });
-});
 
 module.exports = router;

@@ -1,0 +1,4 @@
+* My thinking for these types of files is as follows:
+ - services are functions that operate on one model.
+ - routes connect endpoints to a group of functions from one controller file.
+ - controllers tie services and custom-modules together.
