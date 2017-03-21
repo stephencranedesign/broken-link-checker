@@ -36,8 +36,9 @@ router.get("/api/:user/resources/:host/brokenLinks", function(req, res) {
     });
 });
 
-AUTH.secure("/api/:user/resources/whitelist");
+// AUTH.secure("/api/:user/resources/whitelist");
 router.post("/api/:user/resources/whitelist", function(req, res) {
+    CORS.enable(res);
     var user = req.params.user;
     var host = normalizeUrl(req.body.host);
     var urls = req.body.urls;

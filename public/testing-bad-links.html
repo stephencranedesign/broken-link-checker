@@ -1,0 +1,35 @@
+<!html doctype>
+<html>
+<head>
+	<link rel="/css/stylesheet" href="/css/site.css">
+	<title>Testing dead links</title>
+</head>
+<body>
+	<header>
+		<nav>
+			<a href="/">home</a>
+
+			<!-- multiple wrong links -->
+			<a href="/register-a-site-2.html">post a site</a>
+			<a href="/register-a-site-2.html">query a site</a>
+
+			<!-- outbound links -->
+			<a href="www.google.com/test2">post a site</a>
+			<a href="http://www.google.com/badLink">query a site</a>			
+		</nav>
+	</header>
+	<main>
+		<h1>Testing Deadlinks</h1>
+
+		<!-- bad images -->
+		<img src="/img/test.jpg" />
+
+		<!-- bad iframes -->
+		<iframe src="/badIframeLink.html"></iframe>
+
+
+
+	</main>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+</body>
+</html>

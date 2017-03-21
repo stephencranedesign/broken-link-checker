@@ -47,39 +47,6 @@ function crawl(user, host, config, onComplete) {
         console.log('start'); 
     });
 
-    myCrawler.addFetchCondition(function(queueItem, referrerQueueItem) {
-        console.log('addFetchCondition 2', myCrawler.host);
-        console.log('queueItem: ', queueItem);
-        console.log('referrerQueueItem: ', referrerQueueItem);
-
-        // requesting resource from same domain as page resource was found on.
-        if(queueItem.host === referrerQueueItem.host) {
-            console.log('resource host is same as referrer host');
-
-            // the referrer page host is not the crawler host.
-            if(queueItem.host != myCrawler.host && referrerQueueItem.host != myCrawler.host) {
-                console.log('referrer page host is not crawler host.')
-                return false;
-            }
-            // else return true;
-            else { // the referrer page host is the crawler host.
-
-                console.log('referrer page host is crawler host.')
-                // get the link if it is not already added to the goodResources object.
-                if(!myCrawler.goodResources.hasOwnProperty(queueItem.path)) return true;
-
-                // if it is on the object, call shouldFetch to see if it is a redirect or a downloaded.
-                return myCrawler.goodResources[queueItem.path].shouldFetch();
-            }
-        }
-
-        // requesting resource from different domain the page resource was found on.
-        else if(referrerQueueItem.host != myCrawler.host) return false;
-
-        // download.
-        else return true;
-    });
-
     myCrawler.on('fetchstart', function(queueItem, requestOptions) {
         console.log('fetchstart: ', queueItem);
         site.fetchStart(queueItem);
@@ -87,7 +54,7 @@ function crawl(user, host, config, onComplete) {
 
     myCrawler.on('fetchheaders', function(queueItem, responseObject) {
         site.status.updateProcessResources();
-        myCrawler.processHeader(responseObject);
+        // myCrawler.processHeader(responseObject);
     });
 
     myCrawler.on('fetchtimeout', function(queueItem, crawlerTimeoutValue) {
@@ -100,6 +67,9 @@ function crawl(user, host, config, onComplete) {
     });
 
     myCrawler.on('complete', function() {
+        console.log('## complete ##');
+        console.log(myCrawler.pages);
+        console.log('####');
         site.crawlFinished();
         scheduler.updateRegisteredSite(site);
         if(isInUpdateQueue(site.url)) removeFromUpdateQueue(site);
@@ -115,26 +85,26 @@ function crawl(user, host, config, onComplete) {
     if a good link is found. we dont care where it comes from on the site so we can ignore it and not add it to the queue for the rest of the crawl.
 */
 
-function processHeader() {
-    var crawler = this;
-    return function(responseObject) {
-        console.log('*****');
-        console.log('responseObject: ', responseObject);
+// function processHeader() {
+//     var crawler = this;
+//     return function(responseObject) {
+//         console.log('*****');
+//         console.log('responseObject: ', responseObject);
 
-        // was an error.
-        if(responseObject.statusCode > 399) return;
+//         // was an error.
+//         if(responseObject.statusCode > 399) return;
 
-        // is a redirect
-        else if(responseObject.statusCode > 299 && responseObject.statusCode < 400) {
-            // redirecting to error page..
-            if(/\/404\.aspx\?aspxerrorpath=\//.test(responseObject.headers.location)) return;
-            crawler.goodLinkFound(responseObject);
-        }
+//         // is a redirect
+//         else if(responseObject.statusCode > 299 && responseObject.statusCode < 400) {
+//             // redirecting to error page..
+//             if(/\/404\.aspx\?aspxerrorpath=\//.test(responseObject.headers.location)) return;
+//             crawler.goodLinkFound(responseObject);
+//         }
 
-        // successfully downloaded
-        else if(responseObject.statusCode > 199 && responseObject.statusCode < 300) crawler.goodLinkFound(responseObject);
-    };
-};
+//         // successfully downloaded
+//         else if(responseObject.statusCode > 199 && responseObject.statusCode < 300) crawler.goodLinkFound(responseObject);
+//     };
+// };
 
 /* 
     updating.. 
