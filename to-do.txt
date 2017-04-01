@@ -25,6 +25,10 @@
 9) unify how callbacks / errbacks are built.
 8) !! Resources are not getting nuked before new ones added.
 10) place top 20 worst offenders up on Site.
+11) status not always clearing. sometimes it starts showing 2.5 % complete.
+12) white list not working?
+13) recalc worst offenders from whitelist url?
+
 
 
 *** OLD ***

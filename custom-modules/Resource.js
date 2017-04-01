@@ -5,12 +5,15 @@ var ObjectID = require('mongodb').ObjectID;
 */
 
 class Resource {
-    constructor(user, siteUrl, isBroken, queueItem) {
-        this.info = queueItem;
-        this._id = new ObjectID();
-        this._siteUrl = siteUrl;
-        this.user = user;
-        this.isBroken = isBroken;
+    constructor(user, siteUrl, timeStamp, config) {
+    	this.user = user;
+    	this._siteUrl = siteUrl;
+        this.contentType = config.contentType;
+        this.url = config.url;
+        this.timeStamp = timeStamp;
+        this.referrer = config.referrer;
+        this.status = config.status;
+        this.whiteListed = config.whiteListed || false;
     }
 }
 

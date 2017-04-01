@@ -1,7 +1,7 @@
 var chai = require("chai");
 var chaiAsPromised = require("chai-as-promised");
 var Site = require("../custom-modules/Site.js").Site;
-var OffendersList = require("../custom-modules/Site.js").OffendersList;
+var OffendersList = require("../custom-modules/Offenders.js").List;
 var asyncTimeout = require("./test-utils.js").asyncTimeout;
 var Resource = require("../custom-modules/Resource");
 
@@ -40,59 +40,8 @@ describe("Site api", function() {
 			instance["url"].should.be.equal("test.com");
 		});
 	});
-
-	describe("_groupByPages", function() {
-		it("should filter .links array into pages object based on referrer", function() {
-			var instance = new Site(process.env.testUser, "test.com", 300, {});
-			instance.links = [
-
-				// home page
-				MockResource("test.com", "/about.aspx", "downloaded"),
-				MockResource("test.com", "/about.aspx", "downloaded"),
-				MockResource("test.com", "/contact.aspx", "downloaded"),
-				MockResource("test.com", "/work.aspx", "downloaded"),
-				MockResource("test.com", "/blog.aspx", "downloaded"),
-				MockResource("test.com", "/news.aspx", "downloaded"),
-
-				// about page
-				MockResource("test.com", "/contact.aspx", "downloaded", "/about.aspx"),
-				MockResource("test.com", "/contact.aspx", "downloaded", "/about.aspx"),
-				MockResource("test.com", "/work.aspx", "downloaded", "/about.aspx"),
-				MockResource("test.com", "/blog.aspx", "downloaded", "/about.aspx"),
-				MockResource("test.com", "/news.aspx", "downloaded", "/about.aspx"),
-
-				// contact page
-				MockResource("test.com", "/about.aspx", "downloaded", "/contact.aspx"),
-				MockResource("test.com", "/work.aspx", "downloaded", "/contact.aspx"),
-				MockResource("test.com", "/blog.aspx", "downloaded", "/contact.aspx"),
-				MockResource("test.com", "/news.aspx", "downloaded", "/contact.aspx"),
-
-				// work page
-				MockResource("test.com", "/about.aspx", "downloaded", "/work.aspx"),
-				MockResource("test.com", "/contact.aspx", "downloaded", "/work.aspx"),
-				MockResource("test.com", "/blog.aspx", "downloaded", "/work.aspx"),
-				MockResource("test.com", "/news.aspx", "downloaded", "/work.aspx"),
-
-				// blog page
-				MockResource("test.com", "/about.aspx", "downloaded", "/blog.aspx"),
-				MockResource("test.com", "/contact.aspx", "downloaded", "/blog.aspx"),
-				MockResource("test.com", "/work.aspx", "downloaded", "/blog.aspx"),
-				MockResource("test.com", "/news.aspx", "downloaded", "/blog.aspx"),
-
-				// news page
-				MockResource("test.com", "/about.aspx", "downloaded", "/news.aspx"),
-				MockResource("test.com", "/contact.aspx", "downloaded", "/news.aspx"),
-				MockResource("test.com", "/work.aspx", "downloaded", "/news.aspx"),
-				MockResource("test.com", "/blog.aspx", "downloaded", "/news.aspx"),
-
-				MockResource("test.com", "/news-2.aspx", "downloaded", "/about.aspx"),
-			];
-
-			instance._groupByPages();
-		});
-	});
 	
-	describe('_findWorstBrokenLinks', function() {
+	describe('_findWorstOffenders', function() {
 		var instance = new Site(process.env.testUser, "test.com", 300, {});
 
 		instance.brokenResources = [];
@@ -107,7 +56,7 @@ describe("Site api", function() {
 
 		it("sort the broken links array and return top 5 to worstOffenders array", function() {
 			
-			instance._findWorstBrokenLinks();
+			instance._findWorstOffenders();
 
 			console.log('est: ', instance.worstOffenders);
 			should.not.equal(instance.worstOffenders, undefined);
@@ -168,12 +117,12 @@ describe("Site api", function() {
 		console.log("instance.whitelistedUrls: ", instance.whitelistedUrls);
 
 		it("should return true if passed resource.url has not been added to whitelistedUrls array and resource.status is failed", function() {
-			var result = instance._isBrokenResource(resourceFailed);
+			var result = instance._isBrokenResource(resourceFailed.status);
 			result.should.be.true;
 		});
 
 		it("should return true if passed resource.url has not been added to whitelistedUrls array and resource.status is notfound", function() {
-			var result = instance._isBrokenResource(resourceNotFound);
+			var result = instance._isBrokenResource(resourceNotFound.staus);
 			result.should.be.true;
 		});
 		
@@ -181,12 +130,12 @@ describe("Site api", function() {
 			instance.whiteListAddUrl("test.com/about.aspx");
 			instance.whiteListAddUrl("test.com/about2.aspx");
 
-			var result = instance._isBrokenResource(resourceFailed);
+			var result = instance._isBrokenResource(resourceFailed.status);
 			result.should.be.false;
 		});
 
 		it("should return false if passed resource.url has been added to whitelistedUrls array and resource.status is notfound", function() {
-			var result = instance._isBrokenResource(resourceNotFound);
+			var result = instance._isBrokenResource(resourceNotFound.status);
 			result.should.be.false;
 		});
 	});
