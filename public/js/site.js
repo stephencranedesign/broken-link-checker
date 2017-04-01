@@ -157,6 +157,28 @@ var siteInfo = (function($) {
 		});
 	});
 
+	/* remove */
+	var removeBtn = $('#removeBtn'),
+		removeHost = $('#removeHost'),
+		removeReferrer = $('#removeReferrer'),
+		removeUrl = $('#removeUrl');
+
+	removeBtn.on('click', function() {
+		api(function() {
+			$.ajax({
+			  type: "POST",
+			  url: '/api/'+USER+'/resources/remove',
+			  data: {
+				host: removeHost.val(),
+				url: removeUrl.val(),
+				referrer: removeReferrer.val()
+			  },
+			  headers: { authorization: TOKEN },
+			  success: function(data) { console.log('remove good: ', data); }
+			});
+		});
+	});
+
 	/* pages */
 	var pagesInput = $('#pages-input'),
 		pathInput = $('#path-input'),

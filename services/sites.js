@@ -1,17 +1,13 @@
 var Sites = require('../models/Sites.js');
 var mongoose = require('mongoose'); // for drop function
-var crawler = require('../custom-modules/crawler');
+var currCrawls = require('../custom-modules/currCrawls').currCrawls;
 var Promise = require('bluebird');
 
 function _create(user, site) {
     return Promise.resolve(Sites.create({ 
             url: site.url, 
-            // Resources: site.Resources, 
             date: new Date().toLocaleString(), 
             brokenResources: site.brokenResources.length,
-            downloadedResources: site.downloadedResources.length,
-            redirectedResources: site.redirectedResources.length,
-            fetchTimeouts: site.fetchTimeouts.length,
             worstOffenders: site.worstOffenders,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
@@ -20,7 +16,6 @@ function _create(user, site) {
             totalPages: site.pages.length
         }))
         .then(function(doc) {
-            console.log('_create:: ', doc);
             return doc;
         });
 }
@@ -33,12 +28,8 @@ module.exports.save = function(user, site) {
             user: user
         }, 
         { 
-            // Resources: site.Resources, 
             date: new Date().toLocaleString(), 
             brokenResources: site.brokenResources.length,
-            downloadedResources: site.downloadedResources.length,
-            redirectedResources: site.redirectedResources.length,
-            fetchTimeouts: site.fetchTimeouts.length,
             worstOffenders: site.worstOffenders,
             crawlFrequency: site.crawlFrequency,
             crawlOptions: site.crawlOptions,
@@ -49,7 +40,6 @@ module.exports.save = function(user, site) {
 
     return promise
         .then(function(doc) {
-            console.log('siteService save() :', doc);
             if(doc === null) return _create(user, site);
             else return doc;
         });
@@ -62,13 +52,9 @@ module.exports.updateLinkCount = function(user, site, callback, errback) {
                 url: site.url,
                 user: user
             }, 
-            { 
-                // Resources: site.Resources, 
+            {  
                 date: new Date().toLocaleString(), 
                 brokenResources: site.brokenResources.length,
-                downloadedResources: site.downloadedResources.length,
-                redirectedResources: site.redirectedResources.length,
-                fetchTimeouts: site.fetchTimeouts.length,
                 worstOffenders: site.worstOffenders,
                 crawlFrequency: site.crawlFrequency,
                 crawlOptions: site.crawlOptions,
@@ -84,28 +70,6 @@ module.exports.updateLinkCount = function(user, site, callback, errback) {
     });
 };
 
-module.exports.findLinksForSite = function(user, url, callback, errback) {
-    Sites.findOne({url: url, user: user }, 'url date downloadedLinks redirectedLinks').lean().exec(function(err, doc) {
-        if(err) {
-            errback(err);
-            return;
-        }
-
-        callback(doc);
-    });
-};
-
-module.exports.findbrokenLinks = function(user, url, callback, errback) {
-    Sites.findOne({url: url, user: user}, 'url date brokenLinks' ,function(err, doc) {
-        if(err) {
-            errback(err);
-            return;
-        }
-
-        callback(doc);
-    });
-};
-
 module.exports.findSite = function(user, url, callback, errback) {
     console.log('findSite: ', user, url)
     Sites.findOne({url: url, user: user}, function(err, doc) {
@@ -115,57 +79,29 @@ module.exports.findSite = function(user, url, callback, errback) {
         }
 
         var isCrawling = false;
-        if(doc !== null && crawler.currCrawls.isCrawlingSite(user, url)) isCrawling = true;
+        if(doc !== null && currCrawls.isCrawlingSite(user, url)) isCrawling = true;
 
         callback({site: doc, isCrawling: isCrawling});
     });
 };
 
-module.exports.update = function(query, update, callback) {
-    Sites.update(query, update, function(err, result) {
-        if(err) {
-            callback(err);
-            return;
-        }
-        callback(null, result);
-    })
+module.exports.update = function(query, update) {
+    return Sites.update(query, update).exec();
 };
 
 module.exports.list = function(user, callback, errback) {
     var query = { user: user };
     if(user === 'all') query = {};
-    
-    Sites.find(query, function(err, items) {
-        if (err) {
-            errback(err);
-            return;
-        }
-        callback(items);
-        // mongoose.disconnect();
-    });
+
+    console.log('list: ', query);
+    return Sites.find(query).exec();
 };
 
 module.exports.remove = function(query, callback, errback) {
-    if(query.url === null || query.url === 'all') {
-        Sites.remove({ user: query.user }, function(err, item) {
-            if(err) {
-                callback(err);
-                return;
-            }
 
-            callback(item);
-        });
-    }
-    else {
-        Sites.remove(query, function(err, item) {
-            if(err) {
-                callback(err);
-                return;
-            }
+    if(query.url === null || query.url === 'all') query = { user: query.user };
+    return Sites.remove(query).exec();
 
-            callback(item);
-        });
-    }
 };
 
 module.exports.drop = function(callback) {

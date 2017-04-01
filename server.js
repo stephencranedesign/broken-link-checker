@@ -6,7 +6,6 @@ var bodyParser = require('body-parser');
 
 var siteRoutes = require('./routes/sites');
 var crawlerRoutes = require('./routes/crawler');
-var pagesRoutes = require('./routes/pages');
 var resourcesRoutes = require('./routes/resources');
 var authentication = require('./custom-modules/authentication.js');
 
@@ -22,7 +21,6 @@ authentication.config(app);
 app.use('/', authentication.routes);
 app.use('/', siteRoutes);
 app.use('/', crawlerRoutes);
-app.use('/', pagesRoutes);
 app.use('/', resourcesRoutes);
 
 app.use('*', function(req, res) {
