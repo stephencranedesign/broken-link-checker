@@ -29,7 +29,7 @@ CurrCrawls.prototype.isCrawlingSite = function(user, host) { return this.sites.h
 CurrCrawls.prototype.isIdle = function() { return this.currCrawls ? false : true; };
 CurrCrawls.prototype.reportStatus = function() {
     var status = {};
-    loopObj(this.sites, function(key, val) {
+    loopObj(this.crawls, function(key, val) {
         status[key] = val.status;
     });
     return status;

@@ -5,11 +5,10 @@ var capDecimals = require('./utils.js').capDecimals;
     - combine this into Site.
 */
 class SiteStatus {
-    constructor(crawlType) {
+    constructor() {
         this.totalResources = 0;
         this.processedResources = 0;
         this.percentComplete = 0;
-        this.crawlType = crawlType || 'full-site';
     }
 
     updateProcessResources() { 

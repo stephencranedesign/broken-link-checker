@@ -13,7 +13,7 @@ function _create(user, site) {
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds,
             user: user,
-            totalPages: site.pages.length
+            totalPages: site.totalPages
         }))
         .then(function(doc) {
             return doc;
@@ -35,7 +35,7 @@ module.exports.save = function(user, site) {
             crawlOptions: site.crawlOptions,
             crawlDurationInSeconds: site.crawlDurationInSeconds,
             user: user,
-            totalPages: site.pages.length
+            totalPages: site.totalPages
         }).exec();
 
     return promise

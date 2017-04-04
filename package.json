@@ -19,9 +19,6 @@
     "express": "^4.13.4",
     "express-authentication": "^0.3.2",
     "express-session": "^1.13.0",
-    "ftp": "^0.3.10",
-    "ftp-client": "^0.2.2",
-    "googleapis": "^7.0.0",
     "jwt-simple": "^0.5.1",
     "mongoose": "^4.4.17",
     "morgan": "^1.7.0",
@@ -31,6 +28,7 @@
     "request": "^2.73.0",
     "simplecrawler": "^0.6.2",
     "timer.js": "^1.0.4",
+    "urijs": "^1.18.10",
     "zombie-cors": "^4.2.24"
   },
   "devDependencies": {

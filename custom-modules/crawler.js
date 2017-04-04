@@ -2,10 +2,8 @@ var Site = require('./Site.js').Site;
 var SiteStatus = require('./Site.js').SiteStatus;
 var Resource = require('./Site.js').Resource;
 var SiteService = require("../services/sites.js");
-var ResourcesService = require("../services/resources.js");
 var BrokenLinkCrawler = require('./simple-crawler-extensions.js').BrokenLinkCrawler;
 
-var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
 var currCrawls = require("../custom-modules/CurrCrawls").currCrawls;
 var sites = require('./sites');
 
@@ -36,31 +34,13 @@ function crawl(user, host, config, onComplete) {
 
     currCrawls.add(user, host, site, myCrawler);
 
-    myCrawler.on('crawlstart', function() { 
-        site.crawlStarted();
-        console.log('start'); 
-    });
-
-    myCrawler.on('fetchstart', function(queueItem, requestOptions) {
-        site.fetchStart(queueItem);
-    });
-
-    myCrawler.on('fetchheaders', function(queueItem, responseObject) {
-        site.status.updateProcessResources();
-    });
-
-    myCrawler.on('discoverycomplete', function(queueItem, resources) {
-        console.log('discoverycomplete: ', queueItem.url, resources);
-        site.makePage({ url: queueItem.url, path: queueItem.path, resources: resources });
-
-        site.status.updateTotalResources(myCrawler.queue.length);
-    });
-
     myCrawler.on('complete', function() {
-        console.log('## complete ##');
-        console.log(myCrawler.pages);
-        console.log('####');
-        site.crawlFinished();
+        // var info = myCrawler.crawlComplete.call(myCrawler);
+        myCrawler.whitelistedUrls = site.whitelistedUrls;
+
+        var crawlReport = myCrawler.getCrawlReport();
+
+        site.crawlFinished(crawlReport);
         sites.updateRegistered(site);
         onComplete(site);
         currCrawls.delete(user, host);
