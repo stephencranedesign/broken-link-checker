@@ -40,7 +40,6 @@ class BrokenLinkCrawler extends Crawler {
         });
 
         this.on('discoverycomplete', (queueItem, resources) => {
-            this.makePage({ url: queueItem.url, path: queueItem.path, resources: resources });
             this.status.updateTotalResources(this.queue.length);
         });
 
@@ -71,12 +70,17 @@ class BrokenLinkCrawler extends Crawler {
         });
 
         resources.forEach((resource) => {
-            var o = { url: resource.url, contentType: resource.stateData.contentType, status: resource.status };
+            var o = { url: resource.url, contentType: this._getContentType(resource.stateData.contentType), status: resource.status };
             badUrls[resource.url] = o;
         });
 
         return badUrls;
     };
+
+    _getContentType(contentType) {
+        if(contentType === undefined) return null;
+        return contentType;
+    }
 
     _getBadUrls() {
         var badUrls = [];
@@ -88,6 +92,10 @@ class BrokenLinkCrawler extends Crawler {
 
                 var badUrl = badUrlsRef[url.absPath];
                 badUrl.referrer = url.referrer;
+                badUrl.tagRef = url.tagRef;
+                badUrl.parentTagRef = url.parentTagRef;
+                badUrl.nextTagRef = url.nextTagRef;
+                badUrl.prevTagRef = url.prevTagRef;
                 badUrl.timeStamp = page.timeStamp;
 
                 badUrls.push(badUrl);
@@ -112,53 +120,80 @@ class BrokenLinkCrawler extends Crawler {
 
         var string = buffer.toString("utf8");
 
-        console.log('discoverResources string: ', string);
-        console.log('***');
-
         var $ = cheerio.load(string);
 
-        var resources = [];
+        var resources = []; /* array of strings to return to simplecrawler */
+        var resourceInterfaces = []; /* used to process pages later. */
      
         /* page links */
         $("a[href]").map(function () {
-            var url = $(this).attr('href');
+            var $elm = $(this);
+            var url = $elm.attr('href');
+
+            if(url === undefined) url = "";
 
             /* has a hash -> shouldn't have to worry about a hash url and it causes an error */
             // if(/#/.test(href)) return false;
 
-            if(crawler.shouldAddResource(url, 'a')) resources.push(url);
-            // resources.push(href);
-
+            if(crawler.shouldAddResource(url, 'a')) {
+                resources.push(url);    
+                resourceInterfaces.push(new ResourceInterface(url, $elm));
+            }
         }).get();
 
         /* imgs */
         $("img[src]").map(function () {
-            var url = $(this).attr("src");
-            if(crawler.shouldAddResource(url)) resources.push(url);
+            var $elm = $(this);
+            var url = $elm.attr("src");
+
+            if(url === undefined) url = "";
+
+            if(crawler.shouldAddResource(url)) {
+                resourceInterfaces.push(new ResourceInterface(url, $elm));
+                resources.push(url);
+            }
         }).get();
 
         /* ifames */
         $("ifame[src]").map(function () {
-            var url = $(this).attr("src");
-            if(crawler.shouldAddResource(url)) resources.push(url);
+            var $elm = $(this);
+            var url = $elm.attr("src");
+
+            if(url === undefined) url = "";
+
+            if(crawler.shouldAddResource(url)) {
+                resourceInterfaces.push(new ResourceInterface(url, $elm));
+                resources.push(url);
+            }
         }).get();
 
         /* scripts */
         $("scripts[href]").map(function () {
-            var url = $(this).attr("href");
-            if(crawler.shouldAddResource(url)) resources.push(url);
+            var $elm = $(this);
+            var url = $elm.attr("href");
+
+            if(url === undefined) url = "";
+
+            if(crawler.shouldAddResource(url)) {
+                resourceInterfaces.push(new ResourceInterface(url, $elm));
+                resources.push(url);
+            }
         }).get();
 
         /* styles */
-        $("link[rel='stylesheet']").map(function () {
-            var url = $(this).attr("href");
-            if(crawler.shouldAddResource(url)) resources.push(url);
+        $("link[href]").map(function () {
+            var $elm = $(this);
+            var url = $elm.attr("href");
+
+            if(url === undefined) url = "";
+
+            if(crawler.shouldAddResource(url)) {
+                resourceInterfaces.push(new ResourceInterface(url, $elm));
+                resources.push(url);
+            }
         }).get();
 
-        $("link[rel='next']").map(function() {
-            var url = $(this).attr("href");
-            if(crawler.shouldAddResource(url)) resources.push(url);
-        }).get();
+        this.makePage({ url: queueItem.url, path: queueItem.path, resources: resourceInterfaces });
 
         return resources;
     }
@@ -170,6 +205,40 @@ class BrokenLinkCrawler extends Crawler {
         return true;
     }
 };
+
+class ResourceInterface {
+    constructor(url, $elm) {
+        if(url === undefined) url = "";
+        this.url = url;
+        this.tagRef = this._getTagReference($elm);
+        this.parentTagRef = this._getTagReference($elm.parent());
+        this.prevTagRef = this._getTagReference($elm.prev());
+        this.nextTagRef = this._getTagReference($elm.next());
+    }
+
+
+    _getTagReference($elm) {
+        
+        if(!$elm.length) return null;
+
+        var array = [];
+        var tagName = $elm.prop("tagName");
+        var id = $elm.prop('id');
+        var classNames = $elm.prop('class');
+
+        array.push("<");
+        array.push(tagName);
+        if(id != undefined) array.push('#'+id)
+        if(classNames != undefined) {
+            classNames = classNames.split(' ');
+            array.push('.'+classNames.join('.'));
+        }
+
+        array.push(">");
+
+        return array.join('');
+    }
+}
 
 module.exports.BrokenLinkCrawler = BrokenLinkCrawler;
 

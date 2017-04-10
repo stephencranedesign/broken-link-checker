@@ -11,7 +11,7 @@ router.get('/api/:user/sites/list', SitesCtrl.listEndPoint);
 
 router.get('/api/:user/sites/find/:host', SitesCtrl.findEndPoint);
 
-router.get('/api/:user/sites/findBrokenLinks/:host', SitesCtrl.findBrokenLinksEndPoint);
+// router.get('/api/:user/sites/findBrokenLinks/:host', SitesCtrl.findBrokenLinksEndPoint);
 
 
 module.exports = router;

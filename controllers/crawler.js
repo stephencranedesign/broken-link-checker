@@ -5,10 +5,12 @@ var sites = require("../custom-modules/sites.js");
 var currCrawls = require("../custom-modules/CurrCrawls").currCrawls;
 
 var SitesService = require("../services/sites.js");
-var ResourcesService = require("../services/resources.js");
+var Resources = require("../services/resources.js");
 
 var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
 var Site = require('../custom-modules/Site').Site;
+
+var Promise = require('bluebird');
 
 function syncDbSitesWithNode() {
 	SitesService.list('all') 
@@ -36,7 +38,7 @@ function startCrawl(user, url, config, callback, errback) {
 
 	console.log('starting Crawl for user: ', user, 'url: ', url);
 	// crawling already happening for url
-	if(currCrawls.isCrawlingSite(url)) {
+	if(sites.isCrawling(user, url)) {
 		errback({message: "crawling already in process", url});
 	}
 
@@ -61,10 +63,29 @@ function startCrawl(user, url, config, callback, errback) {
 function _updateSite(user, site, callback, errback) {
 	console.log('updateSite: ', user, site.url);
 
-	ResourcesService.remove({ user: user, _siteUrl: site.url })
-		.then(ResourcesService.insertMany(site.brokenResources))
+	var siteUpdate = {
+		url: site.url, 
+        user: user,
+        date: new Date().toLocaleString(), 
+        brokenResources: site.brokenResources.length,
+        worstOffenders: site.worstOffenders,
+        crawlFrequency: site.crawlFrequency,
+        crawlOptions: site.crawlOptions,
+        crawlDurationInSeconds: site.crawlDurationInSeconds,
+        totalPages: site.totalPages
+	};
+
+	Resources.remove({ user: user, _siteUrl: site.url })
 		.then(function() {
-			return SitesService.save(site.user, site);
+			return Resources.insertMany(site.brokenResources)
+		})
+
+		.then(function() {
+			return SitesService.findOneAndUpdate({ user: site.user, url: site.url } , siteUpdate);
+		})
+		.then(function(obj) {
+			if(obj === null) return SitesService.create(siteUpdate);
+			else Promise.resolve();
 		})
 		.then(function(obj) {
 			console.log('hi: ', obj);
@@ -75,6 +96,7 @@ function _updateSite(user, site, callback, errback) {
 			});
 		})
 		.catch(function(err) {
+			console.log('err: ', err);
 			errback(err);
 		});
 };
@@ -83,7 +105,7 @@ function _updateSite(user, site, callback, errback) {
 function statusForUserSite(req, res) {
 	var user = req.params.user;
 	var host = normalizeUrl(req.params.host);
-	res.json({crawling: currCrawls.isCrawlingSite(user, host), host: host});
+	res.json({crawling: sites.isCrawling(user, host), host: host});
 };
 
 function _setTimerCallbackForCrawler(site) {
@@ -91,7 +113,7 @@ function _setTimerCallbackForCrawler(site) {
     site.timer.setCallback(function(reStartTimer) {
         console.log('timer callback from register');
 
-        if( currCrawls.isCrawlingSite(site.user, site.url) ) return reStartTimer(true);
+        if( sites.isCrawling(site.user, site.url) ) return reStartTimer(true);
 
         startCrawl(site.user, site.url, site.crawlOptions, function(o) {
             console.log('o: ', o);
@@ -113,47 +135,49 @@ function registerEndPoint(req, res) {
 
 	console.log('register: ', host, user);
 
-	SitesService.findSite(user, host, function(doc) {
+	SitesService.findOne({ user: user, url: host })
+		.then(function(doc) {
 
-		console.log('register findSite');
+			console.log('register findOne');
 
-		/* site registered - dont do anything */
-		if(doc.site !== null) {
-			console.log("site already registered");
-			res.status(200);
-			res.json({ message: "site already registered" });
-			return;
-		}
+			/* site registered - dont do anything */
+			if(doc !== null) {
+				console.log("site already registered");
+				res.status(200);
+				res.json({ message: "site already registered" });
+				return;
+			}
 
-		var site = new Site(user, host, req.body.crawlFrequency, req.body);
+			var site = new Site(user, host, req.body.crawlFrequency, req.body);
 
-		console.log('site: ', site);
+			console.log('site: ', site);
 
-		/* save site to db. */
-		var saveStubToDb = true;
+			/* save site to db. */
+			var saveStubToDb = true;
 
-		_setTimerCallbackForCrawler(site);
-		sites.register(site, saveStubToDb, function() {
+			_setTimerCallbackForCrawler(site);
+			sites.register(site, saveStubToDb, function() {
 
-			console.log('registerSite success: ');
+				console.log('registerSite success: ');
 
-			startCrawl(user, site.url, site.crawlOptions, function(o) {
-				if(o.status) console.log(o.message);
-				else console.log(o.message);
+				startCrawl(user, site.url, site.crawlOptions, function(o) {
+					if(o.status) console.log(o.message);
+					else console.log(o.message);
+				}, function(err) {
+					console.log("err trying to crawl site: ", site.url, " ", err);
+				});
+
+				res.json({message: "site successfully registered"});
 			}, function(err) {
-				console.log("err trying to crawl site: ", site.url, " ", err);
+				console.log('registerSite err: ', err);
+				res.status(400).json(err);
 			});
 
-			res.json({message: "site successfully registered"});
-		}, function(err) {
-			console.log('registerSite err: ', err);
+		})
+		.catch(function(err) {
+			console.log("err trying to register crawler with url: ", err);
 			res.status(400).json(err);
 		});
-
-	}, function(err) {
-		console.log("err trying to register crawler with url: ", err);
-		res.status(400).json(err);
-	});
 };
 
 function unRegisterEndPoint(req, res) {
@@ -161,7 +185,7 @@ function unRegisterEndPoint(req, res) {
 	var host = normalizeUrl(req.params.host);
 	var user = req.params.user;
 
-	ResourcesService.remove({ user: user, _siteUrl: host })
+	Resources.remove({ user: user, _siteUrl: host })
 		.then(function() {
 			return sites.unRegister(user, host);
 		})

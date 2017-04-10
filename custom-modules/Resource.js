@@ -13,6 +13,10 @@ class Resource {
         this.timeStamp = config.timeStamp;
         this.referrer = config.referrer;
         this.status = config.status;
+        this.tagRef = config.tagRef;
+        this.parentTagRef = config.parentTagRef;
+        this.prevTagRef = config.prevTagRef;
+        this.nextTagRef = config.nextTagRef;
         this.whiteListed = config.whiteListed || false;
     }
 }

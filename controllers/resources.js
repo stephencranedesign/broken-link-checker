@@ -2,7 +2,7 @@ var CORS = require('../custom-modules/CORS');
 var sites = require('../custom-modules/sites');
 var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
 
-var ResourcesService = require('../services/resources.js');
+var Resources = require('../services/resources.js');
 var SitesService = require('../services/sites.js');
 var Offenders = require('../custom-modules/Offenders');
 
@@ -38,13 +38,14 @@ function whiteList(req, res) {
     var filter = { "url" : { $in: urls } },
         update = { $set: { whiteListed: true } };
 
-    ResourcesService.updateMany(filter, update)
+    Resources.updateMany(filter, update)
         .then(function() {
-        	return ResourcesService.getBrokenLinks(user, host)
+        	return Resources.getBrokenLinks(user, host)
         })
         .then(_reCalcWorstOffenders)
         .then(updateSite)
         .catch(function(err) {
+            console.log('something went wrong :(');
             console.log(err);
             res.status(500).json({ message: "failed to add urls to whitelist", err: err });
         });
@@ -95,7 +96,7 @@ function list(req, res) {
     var host = normalizeUrl(req.params.host);
     var user = req.params.user;
 
-    var promise = ResourcesService.find({ _siteUrl: host, user: user }).exec();
+    var promise = Resources.find({ _siteUrl: host, user: user }).exec();
 
 	promise.then(function(items) {
         console.log('callback: ', items);
@@ -111,7 +112,7 @@ function getBrokenLinks(req, res) {
     var host = normalizeUrl(req.params.host);
     var user = req.params.user;
 
-    ResourcesService.getBrokenLinks(user, host)
+    Resources.getBrokenLinks(user, host)
     .then(function(docs) {
         res.json(docs);
     })
@@ -126,7 +127,7 @@ function getWhiteList(req, res) {
     var user = req.params.user;
 
     console.log('getWhiteList')
-    ResourcesService.getWhiteListedLinks(user, host)
+    Resources.getWhiteListedLinks(user, host)
     .then(function(docs) {
         res.json(docs);
     })
@@ -147,7 +148,7 @@ function remove(req, res) {
 
     var query = { user: user, _siteUrl: host, url: url, referrer: referrer };
 
-    ResourcesService.remove(query)
+    Resources.remove(query)
         .then(function(o) {
             res.status(200).json({ message: "url removed for page" });
         })

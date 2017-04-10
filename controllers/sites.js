@@ -5,6 +5,8 @@ var AUTH = require('../custom-modules/authentication');
 
 var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
 
+var sites = require('../custom-modules/sites');
+
 
 function listEndPoint(req, res) {
     var user = req.params.user;
@@ -20,34 +22,28 @@ function listEndPoint(req, res) {
 };
 
 function findEndPoint(req, res) {
-    var host = normalizeUrl(req.params.host);
+    var url = normalizeUrl(req.params.host);
     var user = req.params.user;
 
     CORS.enable(res);
-    SitesService.findSite(user, host, function(doc) {
-        res.json(doc);
-    }, function(err) {
-        console.log('err on delete: ', err);
-        res.status(400).json(err);
-    });
-};
+    SitesService.findOne({ user: user, url: url })
+        .then(function(doc) {
 
-function findBrokenLinksEndPoint(req, res) {
-    console.log('host: ', req.params.host);
-    var host = normalizeUrl(req.params.host);
-    var user = req.params.user;
-    
-    SitesService.findBrokenLinks(user, host, function(doc) {
-        console.log('find ', doc);
-        res.json(doc);
-    }, function(err) {
-        console.log('err on delete: ', err);
-        res.status(400).json(err);
-    });
+            var isCrawling = false;
+            if(doc !== null && sites.isCrawling(user, url)) isCrawling = true;
+
+            var o = { site: doc, isCrawling: isCrawling };
+
+            res.json(o);
+        })
+        .catch(function(err) {
+            console.log('err on delete: ', err);
+            res.status(400).json(err);
+        });
 };
 
 
 
 module.exports.listEndPoint = listEndPoint;
 module.exports.findEndPoint = findEndPoint;
-module.exports.findBrokenLinksEndPoint = findBrokenLinksEndPoint;
+

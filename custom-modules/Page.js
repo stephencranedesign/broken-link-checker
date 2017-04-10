@@ -19,7 +19,8 @@ class Page {
 		var basePageUri = new URI(this.url);
 
 		resources.forEach((url) => {
-			var uri = new URI(url);
+
+			var uri = new URI(url.url);
 			var absPath;
 
 			// its a relative path
@@ -30,8 +31,12 @@ class Page {
 
 			array.push({
 				absPath: absPath,
-				urlOnPage: url,
-				referrer: this.url
+				urlOnPage: url.url,
+				referrer: this.url,
+				tagRef: url.tagRef,
+				parentTagRef: url.parentTagRef,
+				prevTagRef: url.prevTagRef,
+				nextTagRef: url.nextTagRef
 			});
 		});
 

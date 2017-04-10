@@ -31,8 +31,9 @@ function crawl(user, host, config, onComplete) {
     var site;
 
     site = sites.getRegistered(user, host);
+    sites.setCrawling(user, host, true);
 
-    currCrawls.add(user, host, site, myCrawler);
+    currCrawls.add(user, host, myCrawler);
 
     myCrawler.on('complete', function() {
         // var info = myCrawler.crawlComplete.call(myCrawler);
@@ -42,8 +43,9 @@ function crawl(user, host, config, onComplete) {
 
         site.crawlFinished(crawlReport);
         sites.updateRegistered(site);
-        onComplete(site);
         currCrawls.delete(user, host);
+        sites.setCrawling(user, host, false);
+        onComplete(site);
     });
 
     myCrawler.start();
