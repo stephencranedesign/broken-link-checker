@@ -42,6 +42,19 @@ class Page {
 
 		return array;
 	}
+
+	/* 
+		given an array of absUrls, we'll look through resources of the page and remove them. 
+		- for a site that has 50,000 pages .. ahem ( unitypoint ) .. if pages have 20-100 links on each page,
+		storing an object for each of those links can take up a lot of memory. 
+	*/
+	combResources(array) {
+		array.forEach((absPath) => {
+			this.resources.forEach((resource, i) => {
+				if(absPath === resource.absPath) this.resources.slice(i, 1);
+			});
+		});
+	}
 }
 
 module.exports = Page;

@@ -6,12 +6,15 @@ var Page = require('./Page');
 var SiteStatus = require('./SiteStatus');
 var capDecimals = require('./utils.js').capDecimals;
 
+
 class BrokenLinkCrawler extends Crawler {
     constructor(config) {
         var host = 'www.'+config.host.replace('www.', '');
         super(host);
 
         this.pages = [];
+        this.lastCombLength = 0;
+        this.combingQueue = false;
 
         this._limitCrawlingToHostDomain();
         this.crawlerListeners();
@@ -41,12 +44,71 @@ class BrokenLinkCrawler extends Crawler {
 
         this.on('discoverycomplete', (queueItem, resources) => {
             this.status.updateTotalResources(this.queue.length);
+
+            if(!this.shouldCombPages()) return;
+            this.combPages();
+            this.combQueue();
         });
 
         this.on('complete', () => {
             this.crawlEndTime = Date.now();
             this.crawlDurationInSeconds = capDecimals((this.crawlEndTime - this.crawlStartTime) / 1000, 2);
         });
+    }
+
+    /* 
+        after ever 500 process pages pull out items from queue and pages.resources that we dont need. 
+        this is an 
+    */
+    shouldCombPages() {
+        var diff = this.status.processedResources - this.lastCombLength;
+        if(diff < 500) return false;
+        this.lastCombLength = diff;
+        return true;
+    }
+
+    getCombArray() {
+        var urls = [];
+
+        this.queue.getWithStatus("redirected", function(err, items) {
+            urls.push(items.url);
+        });
+
+        this.queue.getWithStatus("downloaded", function(err, items) {
+            urls.push(items.url);
+        });
+
+        return urls;
+    }
+
+    combPages(array) {
+        var array = this.getCombArray();
+        this.pages.forEach((page) => {
+            page.combResources(array);
+        });
+    }
+
+    combQueue() {
+        if(this.combingQueue) return;
+        this.combingQueue = true;
+
+        var deleteIds = this.getQueueIdsToDelete();
+
+        deleteIds.forEach((id) => {
+            this.queue.slice(id, 1);
+        });
+
+        this.combingQueue = false;
+    }
+
+    getQueueIdsToDelete() {
+        var array = [];
+
+        this.queue.forEach(function(queueItem, i) {
+            if(queueItem.status != "downloaded" || queueItem.status != "redirected") array.push(i);
+        });
+
+        return array;
     }
 
     makePage(config) {

@@ -32,3 +32,13 @@ app.listen(port, function() {
 });
 
 exports.app = app;
+
+
+var memwatch = require('memwatch-next');
+
+memwatch.on('leak', function(info) { 
+	console.log('leak: ', info);
+});
+memwatch.on('stats', function(stats) {
+	console.log('stats: ', stats);
+});

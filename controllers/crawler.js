@@ -45,46 +45,37 @@ function startCrawl(user, url, config, callback, errback) {
 	crawler.crawl(user, url, config, function(site) {
 		console.log('finished crawling and about to save to db', user, url);
 
-		if( !sites.isRegistered(user, url) ) {
-			callback({
-				message: 'site was not registered at the time it was attempted to be saved.',
-				status: 0,
-				site: null,
-				err: null
-			});
+		var siteUpdate = {
+			url: site.url, 
+	        user: user,
+	        date: new Date().toLocaleString(), 
+	        brokenResources: site.brokenResources,
+	        worstOffenders: site.worstOffenders,
+	        crawlFrequency: site.crawlFrequency,
+	        crawlOptions: site.crawlOptions,
+	        crawlDurationInSeconds: site.crawlDurationInSeconds,
+	        totalPages: site.totalPages
+		};
 
-			return;
-		}
-
-		else _updateSite(user, site, callback, errback);
+		_updateSite(siteUpdate, callback, errback);
 	});
 };
 
-function _updateSite(user, site, callback, errback) {
-	console.log('updateSite: ', user, site.url);
+function _updateSite(update, callback, errback) {
+	console.log('updateSite: ', update.user, update.url);
 
-	var siteUpdate = {
-		url: site.url, 
-        user: user,
-        date: new Date().toLocaleString(), 
-        brokenResources: site.brokenResources.length,
-        worstOffenders: site.worstOffenders,
-        crawlFrequency: site.crawlFrequency,
-        crawlOptions: site.crawlOptions,
-        crawlDurationInSeconds: site.crawlDurationInSeconds,
-        totalPages: site.totalPages
-	};
-
-	Resources.remove({ user: user, _siteUrl: site.url })
+	Resources.remove({ user: update.user, _siteUrl: update.url })
 		.then(function() {
-			return Resources.insertMany(site.brokenResources)
+			return Resources.insertMany(update.brokenResources)
 		})
 
 		.then(function() {
-			return SitesService.findOneAndUpdate({ user: site.user, url: site.url } , siteUpdate);
+			var length = update.brokenResources.length;
+			update.brokenResources = length;
+			return SitesService.findOneAndUpdate({ user: update.user, url: update.url } , update);
 		})
 		.then(function(obj) {
-			if(obj === null) return SitesService.create(siteUpdate);
+			if(obj === null) return SitesService.create(update);
 			else Promise.resolve();
 		})
 		.then(function(obj) {
