@@ -1,6 +1,6 @@
 var CORS = require('../custom-modules/CORS');
 var sites = require('../custom-modules/sites');
-var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
+var normalizeHost = require("../custom-modules/utils").normalizeHost;
 
 var Resources = require('../services/resources.js');
 var SitesService = require('../services/sites.js');
@@ -16,11 +16,13 @@ function _reCalcWorstOffenders(brokenResources) {
     };
 };
 
+
+
 function whiteList(req, res) {
 	CORS.enable(res);
     
     var user = req.params.user;
-    var host = normalizeUrl(req.body.host);
+    var host = normalizeHost(req.body.host);
     var urls = req.body.urls;
 
     if(typeof urls === "string") urls = [urls];
@@ -40,10 +42,14 @@ function whiteList(req, res) {
 
     Resources.updateMany(filter, update)
         .then(function() {
-        	return Resources.getBrokenLinks(user, host)
+            return Resources.getBrokenLinks(user, host)
         })
-        .then(_reCalcWorstOffenders)
-        .then(updateSite)
+        .then(function(brokenLinks) {
+            return _reCalcWorstOffenders(brokenLinks)
+        })
+        .then(function(brokenResources) {
+            return updateSite(brokenResources)
+        })
         .catch(function(err) {
             console.log('something went wrong :(');
             console.log(err);
@@ -65,17 +71,17 @@ function whiteList(req, res) {
 
     function updateSite(brokenResources) {
         console.log('updateSite: ', brokenResources);
-        var query = { user: user, url: host },
+        var query = { user: user, host: host },
             update = { 
                 brokenResources: brokenResources.length, 
-                $push: { "crawlOptions.whitelistedUrls": { $each: urls } },
+                $addToSet: { "crawlOptions.whitelistedUrls": { $each: urls } },
                 worstOffenders: brokenResources.worstOffenders
             };
 
         /*
             Store whitelist to site
         */
-        if(site) site.whiteListAddUrl(urls);
+        // if(site) site.whiteListAddUrl(urls);
 
         console.log('update query: ', query, update);
 
@@ -96,7 +102,7 @@ function list(req, res) {
     var host = normalizeUrl(req.params.host);
     var user = req.params.user;
 
-    var promise = Resources.find({ _siteUrl: host, user: user }).exec();
+    var promise = Resources.find({ host: host, user: user }).exec();
 
 	promise.then(function(items) {
         console.log('callback: ', items);
@@ -109,7 +115,7 @@ function list(req, res) {
 
 function getBrokenLinks(req, res) {
     CORS.enable(res);
-    var host = normalizeUrl(req.params.host);
+    var host = normalizeHost(req.params.host);
     var user = req.params.user;
 
     Resources.getBrokenLinks(user, host)
@@ -123,30 +129,30 @@ function getBrokenLinks(req, res) {
 
 function getWhiteList(req, res) {
     CORS.enable(res);
-    var host = normalizeUrl(req.params.host);
+    var host = normalizeHost(req.params.host);
     var user = req.params.user;
 
     console.log('getWhiteList')
     Resources.getWhiteListedLinks(user, host)
-    .then(function(docs) {
-        res.json(docs);
-    })
-    .catch(function(err) {
-        res.status(400).json(err);
-    });
+        .then(function(docs) {
+            res.json(docs);
+        })
+        .catch(function(err) {
+            res.status(400).json(err);
+        });
 };
 
 function remove(req, res) {
     CORS.enable(res);
 
     var user = req.params.user;
-    var host = normalizeUrl(req.body.host);
-    var url = req.body.url;
+    var host = normalizeHost(req.body.host);
+    var host = req.body.host;
     var referrer = req.body.referrer;
 
     if(!sites.isRegistered(user, host)) res.status(403).json({ message: "site not registered" });
 
-    var query = { user: user, _siteUrl: host, url: url, referrer: referrer };
+    var query = { user: user, host: host, url: url, referrer: referrer };
 
     Resources.remove(query)
         .then(function(o) {

@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 
 var SiteSchema = new mongoose.Schema({
-    url: { type: String, required: true },
+    host: { type: String, required: true },
     date: { type: Date, required: true },
 
     // downloadedResources: { type: Number, required: false },

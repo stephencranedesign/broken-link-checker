@@ -1,18 +1,19 @@
 var Resources = require('../models/Resources.js');
 
+
 module.exports.updateMany = function(filter, update) {
-	return Resources.updateMany(filter, update);
+	return Resources.collection.updateMany(filter, update);
 };
 
-module.exports.insertMany = function(resources) {
-	resources.forEach(function(item) {
+module.exports.insertMany = function(array) {
+	array.forEach(function(item) {
 		if(item.contentType === undefined || item.contentType === 'undefined') console.log('item: ', item);
 	});
-	return Resources.insertMany(resources);
+	return Resources.insertMany(array);
 };
 
 module.exports.listForSite = function(user, site) {
-	return Resources.find({ _siteUrl: site, user: user });
+	return Resources.find({ host: site, user: user });
 };
 
 module.exports.remove = function(query, callback, errback) {
@@ -21,10 +22,10 @@ module.exports.remove = function(query, callback, errback) {
 
 module.exports.getBrokenLinks = function(user, url) {
 	return Resources.find(
-		{ _siteUrl: url, user: user, whiteListed: false },
-		{ _id: 0, _siteUrl: 0, user: 0, whiteListed: 0 });
+		{ host: url, user: user, whiteListed: false },
+		{ _id: 0, host: 0, user: 0, whiteListed: 0 });
 };
 
 module.exports.getWhiteListedLinks = function(user, url) {
-	return Resources.distinct('url', { _siteUrl: url, user: user, whiteListed: true });
+	return Resources.distinct('url', { host: url, user: user, whiteListed: true });
 };

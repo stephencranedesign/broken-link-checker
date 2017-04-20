@@ -3,7 +3,7 @@ var SitesService = require('../services/sites.js');
 var CORS = require('../custom-modules/CORS');
 var AUTH = require('../custom-modules/authentication');
 
-var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
+var normalizeHost = require("../custom-modules/utils").normalizeHost;
 
 var sites = require('../custom-modules/sites');
 
@@ -22,15 +22,15 @@ function listEndPoint(req, res) {
 };
 
 function findEndPoint(req, res) {
-    var url = normalizeUrl(req.params.host);
+    var host = normalizeHost(req.params.host);
     var user = req.params.user;
 
     CORS.enable(res);
-    SitesService.findOne({ user: user, url: url })
+    SitesService.findOne({ user: user, host: host })
         .then(function(doc) {
 
             var isCrawling = false;
-            if(doc !== null && sites.isCrawling(user, url)) isCrawling = true;
+            if(doc !== null && sites.isCrawling(user, host)) isCrawling = true;
 
             var o = { site: doc, isCrawling: isCrawling };
 

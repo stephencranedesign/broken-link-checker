@@ -1,3 +1,19 @@
+1) keep site lean when we add it to sites object.
+	- user, url, timer to fire callback
+	- store everything in db and not on server.
+	- create a call crawl queue and limit crawls to 3 at a time.
+	- gut the site.js 
+		- there are a lot of functions that get created for every site that could be placed in seperate modules / defined once.
+
+
+2) goal:
+	- get crawler running by end of week.
+	- let it run for a week.
+
+
+/***
+
+
 1) ensure authentication in place [x]
 2) /update-path []
 3) picks up broken links to outside domains []

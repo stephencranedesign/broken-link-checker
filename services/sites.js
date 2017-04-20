@@ -29,7 +29,7 @@ module.exports.list = function(user, callback, errback) {
 
 module.exports.remove = function(query, callback, errback) {
 
-    if(query.url === null || query.url === 'all') query = { user: query.user };
+    if(query.host === null || query.host === 'all') query = { user: query.user };
     return Sites.remove(query);
 
 };

@@ -1,4 +1,4 @@
-var fs = require("fs");
+
 var CORS = require('../custom-modules/CORS');
 var crawler = require("../custom-modules/crawler.js");
 var sites = require("../custom-modules/sites.js");
@@ -7,19 +7,24 @@ var currCrawls = require("../custom-modules/CurrCrawls").currCrawls;
 var SitesService = require("../services/sites.js");
 var Resources = require("../services/resources.js");
 
-var normalizeUrl = require("../custom-modules/utils").normalizeUrl;
+var normalizeHost = require("../custom-modules/utils").normalizeHost;
+
 var Site = require('../custom-modules/Site').Site;
+var SiteUpdate = require('../custom-modules/Site').SiteUpdate;
+
+var Timer = require('timer.js');
 
 var Promise = require('bluebird');
+var catchHandlers = require('../custom-modules/promise-catch-handlers');
+
 
 function syncDbSitesWithNode() {
 	SitesService.list('all') 
 	    .then(function(array) {
 	        if(process.env.enviornment === 'unitTests') return;
 	        array.forEach(function(siteFromDb) {
-	            var saveStubToDb = false;
-	            var site = new Site(siteFromDb.user, siteFromDb.url, siteFromDb.crawlFrequency, siteFromDb.crawlOptions);
-	            sites.register(site, saveStubToDb);
+	            var site = new Site(siteFromDb.user, siteFromDb.host);
+	            sites.register(site);
 	        });
 	    })
 	    .catch(function(err) {
@@ -27,160 +32,212 @@ function syncDbSitesWithNode() {
 	    });
 }
 
-/* 
-	i think that routes should try to not have defined functions and they should just hook stuff up to functions defined in controllers. 
-	To Do:
-		- move functions for start crawl / registerSite into crawler-controller
-		- Question: what's the difference between custom-modules and -controller? What is a controller in general?
-		- Answer: router should pass off tasks to controller. custom-modules are custom modules I define. Controllers should be the glue between routes and services.
-*/
-function startCrawl(user, url, config, callback, errback) {
 
-	console.log('starting Crawl for user: ', user, 'url: ', url);
-	// crawling already happening for url
-	if(sites.isCrawling(user, url)) {
-		errback({message: "crawling already in process", url});
-	}
+function startTimerForNextCrawl(user, host, crawlFrequency) {
+	var timer = new Timer();
 
-	crawler.crawl(user, url, config, function(site) {
-		console.log('finished crawling and about to save to db', user, url);
-
-		var siteUpdate = {
-			url: site.url, 
-	        user: user,
-	        date: new Date().toLocaleString(), 
-	        brokenResources: site.brokenResources,
-	        worstOffenders: site.worstOffenders,
-	        crawlFrequency: site.crawlFrequency,
-	        crawlOptions: site.crawlOptions,
-	        crawlDurationInSeconds: site.crawlDurationInSeconds,
-	        totalPages: site.totalPages
-		};
-
-		_updateSite(siteUpdate, callback, errback);
+	console.log('timerstarted: ', user, host);
+	timer.start(crawlFrequency).on('end', function () {
+		console.log('start crawl from timer');
+	  	crawlSequence(user, host, crawlFrequency);
 	});
 };
 
-function _updateSite(update, callback, errback) {
-	console.log('updateSite: ', update.user, update.url);
+function crawl(user, host, config) {
+	return new Promise(function(resolve, reject) {
+		crawler.crawl(user, host, config, function(obj) {
+			console.log('crawl callback');
+			startTimerForNextCrawl(user, host, config.crawlFrequency);
+			resolve(obj);
+		});
+	});
+};
 
-	Resources.remove({ user: update.user, _siteUrl: update.url })
+/*
+	takes a site update object and 
+		- i think that right now the update object I pass isn't consistant. I think that sometimes it has brokenResources as an array and sometimes it's a number.. should prolly figure that out.
+*/
+function updateSite(update) {
+	console.log('updateSite: ', update.user, update.host);
+
+	// remove resources for site / user
+	return Resources.remove({ user: update.user, host: update.host })
+
+		// insert new resources
 		.then(function() {
 			return Resources.insertMany(update.brokenResources)
 		})
 
+		// update site
 		.then(function() {
 			var length = update.brokenResources.length;
 			update.brokenResources = length;
-			return SitesService.findOneAndUpdate({ user: update.user, url: update.url } , update);
+			return SitesService.findOneAndUpdate({ user: update.user, host: update.host } , update);
 		})
+
+		// if no site, create one.
 		.then(function(obj) {
 			if(obj === null) return SitesService.create(update);
 			else Promise.resolve();
-		})
-		.then(function(obj) {
-			console.log('hi: ', obj);
-			callback({
-				message: "site successfully crawled",
-				status: 1,
-				err: null
-			});
-		})
-		.catch(function(err) {
-			console.log('err: ', err);
-			errback(err);
 		});
 };
+
+/*
+	The main function that manages starting a crawl / updating stuff in the db when it's completed.
+*/
+function crawlSequence(user, host, siteConfig) {
+
+	return new Promise(function(resolve, reject) {
+
+			// crawling already happening for host
+			if(sites.isCrawling(user, host)) {
+				reject({message: "crawling already in process", host});
+			}
+
+			else resolve();
+		})
+
+		// get config
+		.then(function() {
+			return SitesService.findOne({ user: user, host: host }, { crawlOptions: 1, _id: 0 });
+		})
+
+		// crawl site
+		.then(function(config) {
+			console.log('config: ', config);
+			return crawl(user, host, config);
+		})
+
+		// get config - mainly for the whitelist. It might have changed over the length of the crawl.
+		.then(function(crawledSite) {
+			return SitesService.findOne({ user: user, host: host }, { crawlOptions: 1, _id: 0 })
+				.then(function(config) {
+					return { crawledSite: crawledSite, config: config };
+				});
+		})
+
+		// update site
+		.then(function(o) {
+
+			console.log('crawledSite: ', o.crawledSite);
+			console.log('config: ', o.config);
+
+			var siteUpdate = new SiteUpdate(o.config);
+			siteUpdate.user = user;
+			siteUpdate.host = host;
+			siteUpdate.worstOffenders = o.crawledSite.worstOffenders;
+			siteUpdate.brokenResources = o.crawledSite.brokenResources;
+
+			return updateSite(siteUpdate)
+		})
+
+		// errors.
+		.catch(function(err) {
+			console.log('error crawling site', err);
+		});
+}
 
 
 function statusForUserSite(req, res) {
 	var user = req.params.user;
-	var host = normalizeUrl(req.params.host);
+	var host = normalizeHost(req.params.host);
 	res.json({crawling: sites.isCrawling(user, host), host: host});
-};
-
-function _setTimerCallbackForCrawler(site) {
-	/* callback should restart timer */
-    site.timer.setCallback(function(reStartTimer) {
-        console.log('timer callback from register');
-
-        if( sites.isCrawling(site.user, site.url) ) return reStartTimer(true);
-
-        startCrawl(site.user, site.url, site.crawlOptions, function(o) {
-            console.log('o: ', o);
-            console.log(o.message, ' ',site.url);
-            reStartTimer(true);
-        }.bind(site), function(err) {
-            console.log("err trying to crawl site from register: ", site.url, " ", err);
-            reStartTimer(true);
-        }.bind(site));
-    });
-
-    site.timer.start(); 
 };
 
 function registerEndPoint(req, res) {
 
-	var host = normalizeUrl(req.params.host);
+	var host = normalizeHost(req.params.host);
 	var user = req.params.user;
+	var siteUpdate;
 
 	console.log('register: ', host, user);
 
-	SitesService.findOne({ user: user, url: host })
+	SitesService.findOne({ user: user, host: host })
 		.then(function(doc) {
 
-			console.log('register findOne');
+			console.log('register findOne', doc);
 
 			/* site registered - dont do anything */
 			if(doc !== null) {
 				console.log("site already registered");
-				res.status(200);
-				res.json({ message: "site already registered" });
-				return;
+				throw new catchHandlers.Req200();
 			}
 
-			var site = new Site(user, host, req.body.crawlFrequency, req.body);
+			var site = new Site(user, host);
+			sites.register(site);
 
-			console.log('site: ', site);
+			siteUpdate = new SiteUpdate(site);
+			siteUpdate.crawlOptions = req.body;
 
-			/* save site to db. */
-			var saveStubToDb = true;
+			console.log('siteUpdate: ', siteUpdate);
 
-			_setTimerCallbackForCrawler(site);
-			sites.register(site, saveStubToDb, function() {
-
-				console.log('registerSite success: ');
-
-				startCrawl(user, site.url, site.crawlOptions, function(o) {
-					if(o.status) console.log(o.message);
-					else console.log(o.message);
-				}, function(err) {
-					console.log("err trying to crawl site: ", site.url, " ", err);
-				});
-
-				res.json({message: "site successfully registered"});
-			}, function(err) {
-				console.log('registerSite err: ', err);
-				res.status(400).json(err);
-			});
+			return siteUpdate;
 
 		})
-		.catch(function(err) {
-			console.log("err trying to register crawler with url: ", err);
+		
+		// update existing if already saved to db
+		.then(function(siteUpdate) {
+			console.log('update site: ', siteUpdate);
+			return SitesService.findOneAndUpdate({ user: siteUpdate.user, host: siteUpdate.host } , siteUpdate)
+				.then(function(doc) {
+					return { doc: doc, siteUpdate: siteUpdate };
+				})
+		})
+
+		// if not saved to db, create it
+		.then(function(obj) {
+			console.log('obj: ', obj.siteUpdate);
+	        if(obj.doc === null) return SitesService.create(obj.siteUpdate);
+	        else Promise.resolve(obj);
+	    })
+
+	    // start a crawl 
+	    .then(function(obj) {
+
+	    	crawlSequence(user, host, req.body)
+	    		.then(function(o) {
+	    			console.log('o: ', o);
+	    		})
+	    		.catch(function(err) {
+	    			console.log("err trying to crawl site: ", host, " ", err);
+	    		});
+
+			res.json({message: "site successfully registered"});
+
+	    })
+
+	    // 200 status
+	    .catch(catchHandlers.Req200, function(obj) {
+	    	res.status(200);
+			res.json({ message: "site already registered" });
+	    })
+
+	    // 404 error
+	    .catch(catchHandlers.Req404, function(err) {
+	    	console.log("err trying to register crawler with host: ", err);
 			res.status(400).json(err);
-		});
+	    })
+
+	    // catch all
+	    .catch(function(err) {
+	    	console.log('errs in registerEndPoint: ', err);
+	    });
 };
 
 function unRegisterEndPoint(req, res) {
 	console.log('unregistered endpoint', req.params.host);
-	var host = normalizeUrl(req.params.host);
+	var host = normalizeHost(req.params.host);
 	var user = req.params.user;
 
-	Resources.remove({ user: user, _siteUrl: host })
+	Resources.remove({ user: user, host: host })
 		.then(function() {
 			return sites.unRegister(user, host);
 		})
 		.then(function() {
+			throw new catchHandlers.Req200();
+		})
+		.catch(catchHandlers.Req200, function() {
+			res.status(200);
 			res.json({message: "site successfully unregistered"});
 		})
 		.catch(function(err) {
@@ -194,9 +251,12 @@ function status(req, res) {
 	else res.json({ status: 'idle', crawls: currCrawls.reportStatus() });
 };
 
+
+
+
 module.exports.statusForUserSite = statusForUserSite;
 module.exports.registerEndPoint = registerEndPoint;
 module.exports.unRegisterEndPoint = unRegisterEndPoint;
 module.exports.status = status;
-module.exports.startCrawl = startCrawl;
+module.exports.crawl = crawl;
 module.exports.syncDbSitesWithNode = syncDbSitesWithNode;

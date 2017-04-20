@@ -5,9 +5,9 @@ var ObjectID = require('mongodb').ObjectID;
 */
 
 class Resource {
-    constructor(user, siteUrl, config) {
+    constructor(user, host, config) {
     	this.user = user;
-    	this._siteUrl = siteUrl;
+    	this.host = host;
         this.contentType = config.contentType;
         this.url = config.url;
         this.timeStamp = config.timeStamp;

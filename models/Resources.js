@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 
 var ResourceSchema = new mongoose.Schema({
     user: { type: String, required: true },
-    _siteUrl: { type: String, required: false },
+    host: { type: String, required: false },
     contentType: { type: String, required: false },
     url: { type: String, required: true },
     timeStamp: { type: Date, required: true },
