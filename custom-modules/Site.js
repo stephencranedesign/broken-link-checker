@@ -11,8 +11,6 @@ class Site {
         this.user = user;
         this.crawling = false;
 
-        console.log('Site: ', this);
-
         return this;
     }
 }
@@ -30,7 +28,6 @@ class SiteUpdate {
         this.date = obj.date || new Date().toLocaleString(); 
         this.brokenResources = obj.brokenResources || 0;
         this.worstOffenders = obj.worstOffenders || [];
-        this.crawlFrequency = obj.crawlFrequency || 300000;
         this.crawlOptions = obj.crawlOptions || {};
         this.crawlDurationInSeconds = obj.crawlDurationInSeconds || 0;
         this.totalPages = obj.totalPages || 0;

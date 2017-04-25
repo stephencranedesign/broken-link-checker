@@ -7,6 +7,13 @@ var SiteStatus = require('./SiteStatus');
 var capDecimals = require('./utils.js').capDecimals;
 
 
+/*
+    extends https://www.npmjs.com/package/simplecrawler
+
+    added events:
+        BrokenLinkCrawller::comb - fires after so many pages have been processed.
+        BrokenLinkCrawller::complete
+*/
 class BrokenLinkCrawler extends Crawler {
     constructor(config) {
 
@@ -15,10 +22,13 @@ class BrokenLinkCrawler extends Crawler {
 
         this.pages = [];
         this.lastCombLength = 0;
-        this.combingQueue = false;
+
+        this.combInterval = config.combInterval || 300;
 
         this._limitCrawlingToHostDomain();
         this.crawlerListeners();
+
+        this.pagesLength = 0;
 
         this.status = new SiteStatus();
     }
@@ -39,35 +49,49 @@ class BrokenLinkCrawler extends Crawler {
             this.crawlStartTime = Date.now();
         });
 
+        this.on('queueadd', (queueItem, responseObject) => {
+            this.status.updateTotalResources();
+            // this.urlQueue.push(queueItem.url);
+        });
+
         this.on('fetchheaders', (queueItem, responseObject) => {
             this.status.updateProcessResources();
         });
 
         this.on('discoverycomplete', (queueItem, resources) => {
-            this.status.updateTotalResources(this.queue.length);
 
             if(!this.shouldCombPages()) return;
+
+            console.log('start of comb | pages: ', this.pages.length, " | queue: ", this.queue.length);
+
             this.combPages();
-            this.combQueue();
+            var report = this.getCrawlReport();
+            this.deleteProcessedPages();
+            console.log('end of comb | pages: ', this.pages.length, " | queue: ", this.queue.length);
+            this.emit('BrokenLinkCrawller::comb', report);
         });
 
         this.on('complete', () => {
             this.crawlEndTime = Date.now();
             this.crawlDurationInSeconds = capDecimals((this.crawlEndTime - this.crawlStartTime) / 1000, 2);
+            var report = this.getCrawlReport();
+
+            this.emit('BrokenLinkCrawller::complete', report);
         });
     }
 
     /* 
         after ever 500 process pages pull out items from queue and pages.resources that we dont need. 
-        this is an 
     */
     shouldCombPages() {
         var diff = this.status.processedResources - this.lastCombLength;
-        if(diff < 500) return false;
-        this.lastCombLength = diff;
+        console.log('shouldCombPages: ', diff, ' | ', this.combInterval, ' | ', this.status.processedResources, ' | ', this.lastCombLength);
+        if(diff < this.combInterval) return false;
+        this.lastCombLength = this.status.processedResources;
         return true;
     }
 
+    /* return an array of good resouces from queue to be used by combPages. */
     getCombArray() {
         var urls = [];
 
@@ -82,62 +106,38 @@ class BrokenLinkCrawler extends Crawler {
         return urls;
     }
 
+    /* delete resources in page array that have already been returned with redirected / downloaded status code. */
     combPages(array) {
         var array = this.getCombArray();
         this.pages.forEach((page) => {
+            // console.log('combing page: ', page.url);
             page.combResources(array);
         });
-    }
-
-    combQueue() {
-        if(this.combingQueue) return;
-        this.combingQueue = true;
-
-        var deleteIds = this.getQueueIdsToDelete();
-
-        deleteIds.forEach((id) => {
-            this.queue.slice(id, 1);
-        });
-
-        this.combingQueue = false;
-    }
-
-    getQueueIdsToDelete() {
-        var array = [];
-
-        this.queue.forEach(function(queueItem, i) {
-            if(queueItem.status != "downloaded" || queueItem.status != "redirected") array.push(i);
-        });
-
-        return array;
     }
 
     makePage(config) {
         var page = new Page(config.url, config.path, config.resources);
         this.pages.push(page);
+        this.pagesLength++;
     };
 
-    /*
-        uses
-        @return obj of objs
-    */
-    _getBadUrlsReference() {
-        var resources = [], badUrls = {};
+    _getBadUrlsFromQueue() {
+        var bad = [],
+            urls = [];
 
         this.queue.getWithStatus("failed", function(err, items) {
-            resources = resources.concat(items);
+            bad = bad.concat(items);
         });
 
         this.queue.getWithStatus("notfound", function(err, items) {
-            resources = resources.concat(items);
+            bad = bad.concat(items);
+        });       
+
+        bad.forEach((resource) => {
+            urls.push({ url: resource.url, contentType: this._getContentType(resource.stateData.contentType), status: resource.status });
         });
 
-        resources.forEach((resource) => {
-            var o = { url: resource.url, contentType: this._getContentType(resource.stateData.contentType), status: resource.status };
-            badUrls[resource.url] = o;
-        });
-
-        return badUrls;
+        return urls;
     };
 
     _getContentType(contentType) {
@@ -147,25 +147,52 @@ class BrokenLinkCrawler extends Crawler {
 
     _getBadUrls() {
         var badUrls = [];
-        var badUrlsRef = this._getBadUrlsReference();
+        var badUrlsFromQueue = this._getBadUrlsFromQueue();
 
         this.pages.forEach((page) => {
+
+            page.resourcesProcessed = true;
             page.resources.forEach((url) => {
-                if(!badUrlsRef.hasOwnProperty(url.absPath)) return;
+                // if(!urlsFromQueue.bad.find(hasOwnProperty(url.absPath)) return; /* needed now? I think that since I combPages this check isn't needed.. */
 
-                var badUrl = badUrlsRef[url.absPath];
-                badUrl.referrer = url.referrer;
-                badUrl.tagRef = url.tagRef;
-                badUrl.parentTagRef = url.parentTagRef;
-                badUrl.nextTagRef = url.nextTagRef;
-                badUrl.prevTagRef = url.prevTagRef;
-                badUrl.timeStamp = page.timeStamp;
+                var badUrl = badUrlsFromQueue.find(function(element) {
+                    return element.url === url.absPath;
+                });   
 
-                badUrls.push(badUrl);
+                /* it is a bad url */
+                if(badUrl) {
+                    badUrl.referrer = url.referrer;
+                    badUrl.tagRef = url.tagRef;
+                    badUrl.parentTagRef = url.parentTagRef;
+                    badUrl.nextTagRef = url.nextTagRef;
+                    badUrl.prevTagRef = url.prevTagRef;
+                    badUrl.timeStamp = page.timeStamp;
+
+                    badUrls.push(badUrl);
+                }
+
+                /* if it isn't a bad url, we've already removed the good ones so that means it is pending. flag the page as still having a pending resource. */
+                else page.resoucesProcessed = false;
             });
         });
 
         return badUrls;
+    }
+
+    deleteProcessedPages() {
+        var indexesToDelete = [];
+
+        // get indexes to delete
+        this.pages.forEach(function(page, i) {
+            if(page.resourcesProcessed) indexesToDelete.push(i);
+        });
+
+        var idx = 0;
+        // delete pages that have had all resources processed.
+        indexesToDelete.forEach((i) => {
+            this.pages.splice(i-idx, 1);
+            idx+=1;
+        });
     }
 
     getCrawlReport() {
@@ -173,8 +200,9 @@ class BrokenLinkCrawler extends Crawler {
         return {
             badUrls: this._getBadUrls(),
             crawlDurationInSeconds: this.crawlDurationInSeconds,
-            totalPages: this.pages.length
-        }
+            totalPages: this.pagesLength,
+            firstComb: this.status.processedResources > this.combInterval ? false : true
+        };
     }
 
     discoverResources(buffer, queueItem) {
@@ -194,9 +222,6 @@ class BrokenLinkCrawler extends Crawler {
             var url = $elm.attr('href');
 
             if(url === undefined) url = "";
-
-            /* has a hash -> shouldn't have to worry about a hash url and it causes an error */
-            // if(/#/.test(href)) return false;
 
             if(crawler.shouldAddResource(url, 'a')) {
                 resources.push(url);    

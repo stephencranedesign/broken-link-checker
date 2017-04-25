@@ -12,6 +12,14 @@ module.exports.insertMany = function(array) {
 	return Resources.insertMany(array);
 };
 
+module.exports.count = function(query) {
+	return Resources.count(query);
+}
+
+module.exports.find = function(query) {
+    return Resources.find(query);
+};
+
 module.exports.listForSite = function(user, site) {
 	return Resources.find({ host: site, user: user });
 };

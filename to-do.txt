@@ -1,14 +1,17 @@
-1) keep site lean when we add it to sites object.
+1) keep site lean when we add it to sites object
 	- user, url, timer to fire callback
-	- store everything in db and not on server.
-	- create a call crawl queue and limit crawls to 3 at a time.
-	- gut the site.js 
-		- there are a lot of functions that get created for every site that could be placed in seperate modules / defined once.
+	- store everything in db and not on server
+	- create a call crawl queue and limit crawls to 3 at a time
+	- after 1000 links do a mini complete process
+		- get a crawl report
+		- dont delete resources from db when updating site
+		- first time delete previous crawl resources
+		- if less then number specified before calling onUpdate, then treat as the first 
 
 
 2) goal:
-	- get crawler running by end of week.
-	- let it run for a week.
+	- get crawler running by end of week
+	- let it run for a week
 
 
 /***

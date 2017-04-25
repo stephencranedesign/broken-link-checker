@@ -28,46 +28,39 @@
 		</div>
 		<div id="logged-in-stuff" style="display: none;">
 
-			<h2>Post a Site</h2>
+			<h2>Register a Site</h2>
 			
-			<input type="text" id="protocol" value="http">
-			<input type="text" id="crawlInput" value="cernecalcium.com">
-			<input type="text" id="path" value="/">
-			<input type="text" id="port" value="80">
-			<input type="text" id="interval" value="250">
-			<input type="text" id="maxConcurrency" value="1">
-			<input type="text" id="maxDepth" value="0">
-			<input type="text" id="crawlFrequency" value="300">
+			<input type="text" id="protocol" value="http" placeholder="protocol">
+			<input type="text" id="crawlInput" value="cernecalcium.com" placeholder="host">
+			<input type="text" id="path" value="/" placeholder="path">
+			<input type="text" id="port" value="80" placeholder="port">
+			<input type="text" id="interval" value="250" placeholder="interval">
+			<input type="text" id="maxConcurrency" value="1" placeholder="maxConcurrency">
+			<input type="text" id="maxDepth" value="0" placeholder="maxDepth">
+			<input type="text" id="crawlFrequency" value="300" placeholder="crawlFrequency">
 
 			<button id="crawlStart">register a site</button>
 
 			<hr>
 
 			<h2>Unregister a site</h2>
-			<input type="text" id="deleteInput" value="cernecalcium.com">
+			<input type="text" id="deleteInput" value="cernecalcium.com" placeholder="host">
 			<button id="deleteStart">unregister site</button>
 
 			<hr>
 
 			<h2>Whitelist urls</h2>
-			<input type="text" id="whiteListHost" value="cernecalcium.com">
-			<input type="text" id="whiteListUrl" value="http://www.cernecalcium.com/www.google.com/test">
+			<input type="text" id="whiteListHost" value="cernecalcium.com" placeholder="host">
+			<input type="text" id="whiteListUrl" value="http://www.cernecalcium.com/www.google.com/test" placeholder="url[string] | urls[array]">
 			<button id="whiteListBtn">Add to white list</button>
 
 			<hr>
 
 			<h2>Remove url</h2>
-			<input type="text" id="removeHost" value="cernecalcium.com">
-			<input type="text" id="removeUrl" value="http://www.cernecalcium.com/www.google.com/test">
-			<input type="text" id="removeReferrer" value="">
+			<input type="text" id="removeHost" value="cernecalcium.com" placeholder="host">
+			<input type="text" id="removeUrl" value="http://www.cernecalcium.com/www.google.com/test" placeholder="url to remove">
+			<input type="text" id="removeReferrer" value="" placeholder="page url is on">
 			<button id="removeBtn">Remove</button>
-
-			<hr>
-
-			<h2>Update a path</h2>
-			<input type="text" id="updateInput" value="cernecalcium.com">
-			<input type="text" id="updateInputPath" value="/contact-us.aspx">
-			<button id="updateStart">update path</button>
 		</div>
 	</main>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>

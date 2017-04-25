@@ -1,7 +1,12 @@
+/*
+    the glue between crawler controller and the BrokenLink crawler together.
+*/
+
 var Site = require('./Site.js').Site;
 var SiteStatus = require('./Site.js').SiteStatus;
 var Resource = require('./Site.js').Resource;
 var SiteService = require("../services/sites.js");
+var ResourcesService = require("../services/resources.js");
 var BrokenLinkCrawler = require('./simple-crawler-extensions.js').BrokenLinkCrawler;
 
 var Resource = require('./Resource');
@@ -15,69 +20,88 @@ var Offender = require('./Offenders').Offender;
 var Promise = require('bluebird');
 
 
-function makeCrawler(host, config) {
-    var crawler = new BrokenLinkCrawler({ host: host });
+function makeCrawler(host, crawlOptions) {
+    var crawler = new BrokenLinkCrawler({ host: host, combInterval: 500 });
 
-    crawler.initialProtocol = config.initialProtocol || 'http';
-    crawler.initialPath = config.initialPath || '/';
-    if(config.port) crawler.port = parseInt(config.port);
-    crawler.interval = parseInt(config.interval) || 250;
-    crawler.maxConcurrency = parseInt(config.maxConcurrency) || 1;
-    crawler.maxDepth = parseInt(config.maxDepth) || 0;
+    crawler.initialProtocol = crawlOptions.initialProtocol || 'http';
+    crawler.initialPath = crawlOptions.initialPath || '/';
+    if(crawlOptions.port) crawler.port = parseInt(crawlOptions.port);
+    crawler.interval = parseInt(crawlOptions.interval) || 250;
+    crawler.maxConcurrency = parseInt(crawlOptions.maxConcurrency) || 1;
+    crawler.maxDepth = parseInt(crawlOptions.maxDepth) || 0;
     crawler.filterByDomain = false;
 
     return crawler;
 };
 
-function crawl(user, host, config, onComplete) {
+function crawl(config) {
 
-    var host = host;
-    var myCrawler = makeCrawler(host, config);
-    var crawlFrequency = config.crawlFrequency || 10080; // 7 days.
+    var host = config.host;
+    var myCrawler = makeCrawler(config.host, config.crawlOptions);
+    var crawlFrequency = config.crawlOptions.crawlFrequency || 10080; // 7 days.
 
-    sites.setCrawling(user, host, true);
+    sites.setCrawling(config.user, config.host, true);
 
-    currCrawls.add(user, host, myCrawler);
+    currCrawls.add(config.user, config.host, myCrawler);
 
-    console.log('crawl: ', user, host, config);
+    myCrawler.on('BrokenLinkCrawller::comb', function(crawlReport) {
 
-    myCrawler.on('complete', function() {
-
-        var crawlReport = myCrawler.getCrawlReport();
-
-        crawlFinished(user, host, crawlReport)
+        mergeReport(config.user, config.host, crawlReport)
             .then(function(report) {
-                currCrawls.delete(user, host);
-                sites.setCrawling(user, host, false);
-                onComplete(report);
+                config.comb(report);
+            });
+    });
+
+    myCrawler.on('BrokenLinkCrawller::complete', function(crawlReport) {
+
+        mergeReport(config.user, config.host, crawlReport)
+            .then(function(report) {
+                currCrawls.delete(config.user, config.host);
+                sites.setCrawling(config.user, config.host, false);
+                config.complete(report);
             });
     });
 
     myCrawler.start();
 };
 
-// move stuff from site to here.
+/* gets info about site from & merge it with crawl report. */
+function mergeReport(user, host, crawlReport) {
 
-function crawlFinished(user, host, crawlReport) {
+    crawlReport.user = user;
+    crawlReport.host = host;
 
-    // get whiteListedUrls
+    // get site
     return SiteService.findOne({ user: user, host: host })
+        
         .then(function(site) {
 
-            console.log('site: ', site);
-
+            // get whiteListedUrls from crawl
             var whitelistedUrls = site.crawlOptions.whitelistedUrls || [];
+            crawlReport.brokenResources = brokenResourcesFromCrawl(user, host, whitelistedUrls, crawlReport.badUrls);
 
-            console.log('whitelistedUrls: ', whitelistedUrls);
+            // get brokenResource from db
+            if(crawlReport.firstComb) return [];
+            else return ResourcesService.find({ user: user, host: host, whiteListed: false });
+        })
 
-            crawlReport.brokenResources = getBrokenResources(user, host, whitelistedUrls, crawlReport.badUrls);
-            crawlReport.worstOffenders = findWorstOffenders(crawlReport.brokenResources);
+        .then(function(dbResources) {
+            var brokenResources = crawlReport.brokenResources.concat(dbResources);
+            // console.log('dbResources: ', dbResources);
+            // console.log('crawlReport.brokenResources: ', crawlReport.brokenResources);
+            // console.log('concat: ', brokenResources);
 
+            crawlReport.worstOffenders = findWorstOffenders(brokenResources);
+            console.log('worstOffenders: ', crawlReport.worstOffenders);
             return crawlReport;
+        })
+
+        .catch(function(err) {
+            console.log('err during mergeReport: ', err);
         });
 };
 
-function getBrokenResources(user, host, whitelistedUrls, badUrls) {
+function brokenResourcesFromCrawl(user, host, whitelistedUrls, badUrls) {
     var brokenResources = [];
 
     badUrls.forEach((badUrl) => {
@@ -89,49 +113,17 @@ function getBrokenResources(user, host, whitelistedUrls, badUrls) {
     return brokenResources;
 };
 
-/*
-    pass either an array of urls or a single url to add to whiteList array.
-    @return void
-*/
-// Site.prototype.whiteListAddUrl = function(url) {
-//     if(typeof url.forEach === "function") { // check to see if it's an array.
-//         var array = [];
-
-//         // ensure whitelist stays unique.
-//         url.forEach(function(val) {
-//             if(array.indexOf(val) > -1) return;
-//             if(this.whitelistedUrls.indexOf(val) > -1) return;
-//             array.push(val);
-//         }.bind(this));
-
-//         this.whitelistedUrls = this.whitelistedUrls.concat(array);
-//         this.crawlOptions.whitelistedUrls = this.whitelistedUrls;
-//     }
-//     else {
-
-//         // ensure whitelist stays unique.
-//         if(this.whitelistedUrls.indexOf(url) > -1) return;
-//         this.whitelistedUrls.push(url);
-//         this.crawlOptions.whitelistedUrls = this.whitelistedUrls;
-//     }
-// };
-
 function findWorstOffenders(brokenResources) {
     
     var array = brokenResources.filter(function(resource) {
         return !resource.whiteListed;
     });
 
-    console.log('_findWorstOffenders: ', array);
     var worstOffenders = new OffendersList(array);
     worstOffenders.sortByProp('length', true);
     return worstOffenders.array.slice(0,5);
 }; 
 
-/*
-    compares url with whitelisted urls.
-    @return bool
-*/
 function isWhiteListed(whiteListArray, url) {
     var isWhiteListed = false;
     if( whiteListArray.indexOf(url) > -1 ) isWhiteListed = true;

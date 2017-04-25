@@ -27,7 +27,7 @@
 			var sites = [];
 			var ul = $('#sites');
 			data.forEach(function(o) {
-				sites.push("<li>"+o.url+"</li>")
+				sites.push("<li>"+o.host+"</li>")
 			});
 			ul.html(sites.join(''));
 		});

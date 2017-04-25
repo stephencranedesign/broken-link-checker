@@ -12,7 +12,6 @@ var SiteSchema = new mongoose.Schema({
 
     crawlOptions: { type: Object, required: false },
     crawlDurationInSeconds: { type: Number, required: false },
-    crawlFrequency: { type: Number, required: true }, // should be number of seconds.
 
     user: { type: String, required: true },
 

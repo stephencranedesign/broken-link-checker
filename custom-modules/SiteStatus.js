@@ -16,10 +16,15 @@ class SiteStatus {
         this.updatePercentComplete(); 
     };
 
-    updateTotalResources(length) { 
-        this.totalResources = length; 
+    // updateTotalResources(length) { 
+    //     this.totalResources = length; 
+    //     this.updatePercentComplete(); 
+    // };
+
+    updateTotalResources() {
+        this.totalResources += 1;
         this.updatePercentComplete(); 
-    };
+    }
 
     updatePercentComplete() { 
         this.percentComplete = capDecimals(this.processedResources/this.totalResources, 2); 

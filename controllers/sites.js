@@ -11,7 +11,7 @@ var sites = require('../custom-modules/sites');
 function listEndPoint(req, res) {
     var user = req.params.user;
 
-    SitesService.list(user)
+    SitesService.find({})
         .then(function(items) {
             console.log('callback: ', items);
             res.json(items);
@@ -24,6 +24,8 @@ function listEndPoint(req, res) {
 function findEndPoint(req, res) {
     var host = normalizeHost(req.params.host);
     var user = req.params.user;
+
+    console.log('findEndPoint: ', host, user);
 
     CORS.enable(res);
     SitesService.findOne({ user: user, host: host })
@@ -42,8 +44,24 @@ function findEndPoint(req, res) {
         });
 };
 
+function updateConfigEndPoint(req, res) {
+    var host = normalizeHost(req.params.host);
+    var user = req.params.user;
+    var crawlOptions = req.body;
+
+    CORS.enable(res);
+
+    SitesService.update({ user: user ,host }, { crawlOptions: crawlOptions })
+        .then(function(doc) {
+            res.status(200).json(doc);
+        })
+        .catch(function(err) {
+            res.status(400).json(err);
+        })
+};
+
 
 
 module.exports.listEndPoint = listEndPoint;
 module.exports.findEndPoint = findEndPoint;
-
+module.exports.updateConfigEndPoint = updateConfigEndPoint;

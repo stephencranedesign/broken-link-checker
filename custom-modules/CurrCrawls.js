@@ -6,20 +6,21 @@ var loopObj = require('./utils.js').loopObj;
 */
 var CurrCrawls = function() {
     this.crawls = {};
-    this.currCrawls = 0;
+    this.activeCrawls = 0;
 };
 CurrCrawls.prototype.getCrawl = function(user, host) {
     return this.crawls.hasOwnProperty(user+"::"+host) ? this.crawls[user+"::"+host] : null;
 };
 CurrCrawls.prototype.add = function(user, host, currCrawl) { 
     this.crawls[user+"::"+host] = currCrawl; 
-    this.currCrawls++;
+    this.activeCrawls += 1;
 };
 CurrCrawls.prototype.delete = function(user, host) { 
     delete this.crawls[user+"::"+host];
-    this.currCrawls--;
+    this.activeCrawls -= 1;
+    console.log("currCrawls: ", this.crawls);
 };
-CurrCrawls.prototype.isIdle = function() { return this.currCrawls ? false : true; };
+CurrCrawls.prototype.isIdle = function() { return this.activeCrawls ? false : true; };
 CurrCrawls.prototype.reportStatus = function() {
     var status = {};
     loopObj(this.crawls, function(key, val) {

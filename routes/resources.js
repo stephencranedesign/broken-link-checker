@@ -7,7 +7,7 @@ router.get('/api/:user/resources/:host/list', ResourcesCtrl.list);
 
 router.get("/api/:user/resources/:host/brokenLinks", ResourcesCtrl.getBrokenLinks);
 
-router.get("/api/:user/resources/:host/whitelist", ResourcesCtrl.getWhiteList);
+router.get("/api/:user/resources/:host/getWhitelist", ResourcesCtrl.getWhiteList);
 
 // AUTH.secure("/api/:user/resources/whitelist");
 router.post("/api/:user/resources/whitelist", ResourcesCtrl.whiteList);

@@ -3,7 +3,6 @@ var mongoose = require('mongoose'); // for drop function
 var Promise = require('bluebird');
 
 module.exports.findOneAndUpdate = function(query, update) {
-    console.log('update: ', update);
     return Sites.findOneAndUpdate(query, update);
 };
 
@@ -11,19 +10,15 @@ module.exports.create = function(site) {
     return Promise.resolve(Sites.create(site));
 };
 
-module.exports.findOne = function(query) {
-    return Sites.findOne(query);
+module.exports.findOne = function(query, filter) {
+    return Sites.findOne(query, filter);
 };
 
 module.exports.update = function(query, update) {
     return Sites.update(query, update);
 };
 
-module.exports.list = function(user, callback, errback) {
-    var query = { user: user };
-    if(user === 'all') query = {};
-
-    console.log('list: ', query);
+module.exports.find = function(query) {
     return Sites.find(query);
 };
 
