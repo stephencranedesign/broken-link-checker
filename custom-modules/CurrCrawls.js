@@ -16,6 +16,10 @@ CurrCrawls.prototype.add = function(user, host, currCrawl) {
     this.activeCrawls += 1;
 };
 CurrCrawls.prototype.delete = function(user, host) { 
+    
+    var crawl = this.getCrawl(user, host);
+    if(crawl) crawl.stop();
+
     delete this.crawls[user+"::"+host];
     this.activeCrawls -= 1;
     console.log("currCrawls: ", this.crawls);

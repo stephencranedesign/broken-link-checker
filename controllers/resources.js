@@ -117,14 +117,17 @@ function getBrokenLinks(req, res) {
     CORS.enable(res);
     var host = normalizeHost(req.params.host);
     var user = req.params.user;
+    var from = req.params.from;
+    var to = req.params.to;
 
-    Resources.getBrokenLinks(user, host)
-    .then(function(docs) {
-        res.json(docs);
-    })
-    .catch(function(err) {
-        res.status(400).json(err);
-    });
+    Resources.getBrokenLinks(user, host, from, to)
+        .then(function(docs) {
+            if(from != undefined && to != undefined) res.json(docs.slice(from, to));
+            else res.json(docs);
+        })
+        .catch(function(err) {
+            res.status(400).json(err);
+        });
 };
 
 function getWhiteList(req, res) {

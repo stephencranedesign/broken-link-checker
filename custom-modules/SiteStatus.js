@@ -16,11 +16,6 @@ class SiteStatus {
         this.updatePercentComplete(); 
     };
 
-    // updateTotalResources(length) { 
-    //     this.totalResources = length; 
-    //     this.updatePercentComplete(); 
-    // };
-
     updateTotalResources() {
         this.totalResources += 1;
         this.updatePercentComplete(); 

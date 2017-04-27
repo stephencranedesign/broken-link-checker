@@ -17,7 +17,8 @@ var capDecimals = require('./utils.js').capDecimals;
 class BrokenLinkCrawler extends Crawler {
     constructor(config) {
 
-        var host = 'www.'+config.host.replace('www.', '');
+        // var host = 'www.'+config.host.replace('www.', '');
+        var host = config.host;
         super(host);
 
         this.pages = [];

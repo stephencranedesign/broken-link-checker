@@ -8,9 +8,7 @@ var SitesCtrl = require('../controllers/sites');
 */
 
 router.get('/api/:user/sites/list', SitesCtrl.listEndPoint);
-
 router.get('/api/:user/sites/find/:host', SitesCtrl.findEndPoint);
-
 router.post('/api/:user/sites/:host/updateConfig', SitesCtrl.updateConfigEndPoint);
 
 

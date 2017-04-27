@@ -11,7 +11,6 @@ var loopObj = require('./utils.js').loopObj;
 var crawlerCtrl = require("../controllers/crawler");
 var currCrawls = require("../custom-modules/CurrCrawls").currCrawls;
 
-/* Site Stub */
 var registered = {};
 
 var register = function(site) {
@@ -22,17 +21,16 @@ var register = function(site) {
     removes resources for site, as well as site in db and on server.
     @return promise
 */
-function unRegister(user, host, callback, errback) {
+function unRegister(user, host) {
     console.log('unRegister:: ', user, host);
 
     if( isRegistered(user,host) !== undefined ) {
         console.log('delete registered: ', host);
         delete registered[user+"::"+host];
+        currCrawls.delete(user, host);
     }
 
-    var crawl = currCrawls.getCrawl(user, host);
     console.log('unRegister crawl: ', crawl);
-    if(crawl) crawl.stop();
     
     return Resources.remove({ user: user, host: host })
         .then(function() {

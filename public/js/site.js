@@ -83,14 +83,30 @@ var siteInfo = (function($) {
 	/* list site */
 	var brokenLinksInput = $('#brokenLinksInput');
 	var brokenLinksStart = $('#brokenLinksStart');
-	var brokenLinks = $('#brokenLinks');
+	// var brokenLinks = $('#brokenLinks');
 
 	brokenLinksStart.on('click', function() {
 		var url = brokenLinksInput.val();
 		$.get('/api/'+USER+'/resources/'+url+'/brokenLinks', function(data) {
 			console.log('brokenLinks Info: ', data);
-			var brokenLinks = data.brokenLinks.length;
-			brokenLinks.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
+			// var brokenLinks = data.brokenLinks.length;
+			// brokenLinks.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
+		});
+	});
+
+	/* list site */
+	var brokenLinksFromHost = $('#brokenLinksFromHost');
+	var brokenLinksFromHostStart = $('#brokenLinksFromHostStart');
+	var brokenLinksFrom = $('#brokenLinksFrom');
+	var brokenLinksTo = $('#brokenLinksTo');
+	// var brokenLinks = $('#brokenLinks');
+
+	brokenLinksFromHostStart.on('click', function() {
+		var url = brokenLinksFromHost.val();
+		$.get('/api/'+USER+'/resources/'+url+'/brokenLinks/'+brokenLinksFrom.val()+'/'+brokenLinksTo.val(), function(data) {
+			console.log('brokenLinks Info: ', data.length, data);
+			// var brokenLinks = data.brokenLinks.length;
+			// brokenLinks.html('<h4>Broken Links for Site:'+data.brokenLinks.length+'</h4><p>Check console for output.</p></div>');
 		});
 	});
 

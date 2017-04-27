@@ -17,6 +17,8 @@ var Timer = require('timer.js');
 var Promise = require('bluebird');
 var catchHandlers = require('../custom-modules/promise-catch-handlers');
 
+var heapdump = require('heapdump');
+
 /* should just get rid of this and have calls that ask for if something is registered to just check with the db.. */
 function syncDbSitesWithNode() {
 	SitesService.find({}) 
@@ -57,6 +59,10 @@ function crawl(user, host, crawlOptions) {
 			crawlOptions: crawlOptions,
 			comb: _combCrawler,
 			complete: function(report) {
+
+				//3. Get Heap dump
+				process.kill(process.pid, 'SIGUSR2');
+
 				startTimerForNextCrawl(user, host, crawlOptions.crawlFrequency);
 				resolve(report);
 			}
@@ -271,6 +277,8 @@ function unRegisterEndPoint(req, res) {
 	var host = normalizeHost(req.params.host);
 	var user = req.params.user;
 
+	console.log('unregistered:', host, user);
+
 	Resources.remove({ user: user, host: host })
 		.then(function() {
 			return sites.unRegister(user, host);
@@ -305,7 +313,7 @@ function registerCrawl(user, host) {
 	console.log('registerCrawl: ', user, host);
 	queue.push(user+'::'+host);
 	console.log(activeCrawls);
-	if(activeCrawls > 1) return;
+	if(activeCrawls > 3) return;
 	
 	startNextInQueue();
 }
