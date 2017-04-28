@@ -22,7 +22,6 @@ CurrCrawls.prototype.delete = function(user, host) {
 
     delete this.crawls[user+"::"+host];
     this.activeCrawls -= 1;
-    console.log("currCrawls: ", this.crawls);
 };
 CurrCrawls.prototype.isIdle = function() { return this.activeCrawls ? false : true; };
 CurrCrawls.prototype.reportStatus = function() {

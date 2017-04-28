@@ -66,8 +66,11 @@ class BrokenLinkCrawler extends Crawler {
             console.log('start of comb | pages: ', this.pages.length, " | queue: ", this.queue.length);
 
             this.combPages();
+
             var report = this.getCrawlReport();
+
             this.deleteProcessedPages();
+
             console.log('end of comb | pages: ', this.pages.length, " | queue: ", this.queue.length);
             this.emit('BrokenLinkCrawller::comb', report);
         });
@@ -78,6 +81,9 @@ class BrokenLinkCrawler extends Crawler {
             var report = this.getCrawlReport();
 
             this.emit('BrokenLinkCrawller::complete', report);
+            setTimeout(function() {
+                process.kill(process.pid, 'SIGUSR2');
+            }, 10000);
         });
     }
 
@@ -197,13 +203,8 @@ class BrokenLinkCrawler extends Crawler {
     }
 
     getCrawlReport() {
-
-        return {
-            badUrls: this._getBadUrls(),
-            crawlDurationInSeconds: this.crawlDurationInSeconds,
-            totalPages: this.pagesLength,
-            firstComb: this.status.processedResources > this.combInterval ? false : true
-        };
+        var firstComb = this.status.processedResources > this.combInterval ? false : true;
+        return new Report(this._getBadUrls(), this.crawlDurationInSeconds, this.pagesLength, firstComb);
     }
 
     discoverResources(buffer, queueItem) {
@@ -326,6 +327,15 @@ class ResourceInterface {
         array.push(">");
 
         return array.join('');
+    }
+}
+
+class Report {
+    constructor(badUrls, crawlDurationInSeconds, totalPages, firstComb) {
+        this.badUrls = badUrls;
+        this.crawlDurationInSeconds = crawlDurationInSeconds;
+        this.totalPages = totalPages;
+        this.firstComb = firstComb;
     }
 }
 

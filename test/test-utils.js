@@ -3,7 +3,6 @@ var Page = require('../custom-modules/Page');
 
 var Promise = require('bluebird');
 
-var pagesService = require('../services/pages');
 var resourcesService = require('../services/resources');
 
 module.exports.asyncTimeout = function(callback, delay) {
@@ -58,29 +57,6 @@ function MockPage(path, resources) {
 	return page;
 }
 
-function fillPages() {
-	return new Promise(function(resolve, reject) {
-		console.log('fillPages');
-		var pages = [];
-
-		pages.push(MockPage("/test", ["/"]));
-		pages.push(MockPage("/test-2", ["/"]));
-		pages.push(MockPage("/test-3", ["/"]));
-		pages.push(MockPage("/test-4", ["/"]));
-		pages.push(MockPage("/test-5", ["/"]));
-
-		pagesService.insertMany(pages)
-		.then(function(docs) {
-			console.log('docs: ', docs);
-			resolve(docs);
-		})
-		.catch(function(err) {
-			console.log('err: ', err);
-			reject(err);
-		});
-	});
-};
-
 function fillResources() {
 	console.log('fillResources 1');
 	return new Promise(function(resolve, reject) {
@@ -106,6 +82,5 @@ function fillResources() {
 module.exports.MockQueueItem = MockQueueItem;
 module.exports.MockResource = MockResource;
 module.exports.MockPage = MockPage;
-module.exports.fillPages = fillPages;
 module.exports.fillResources = fillResources;
 

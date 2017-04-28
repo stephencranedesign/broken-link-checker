@@ -6,14 +6,12 @@ var MockQueueItem = require('./test-utils.js').MockQueueItem;
 
 var crawlerCtrl = require('../controllers/crawler-controller.js');
 var recursiveCheck = require("../custom-modules/utils").recursiveCheck;
-var fillPages = require("./test-utils").fillPages;
 var MockPage = require('./test-utils').MockPage;
 var fillResources = require("./test-utils").fillResources;
 
 var siteFromDb = require('./test-utils').siteFromDb;
 
 var SitesService = require('../services/sites');
-var PagesService = require('../services/pages');
 var ResourcesService = require('../services/resources');
 
 /* endpoints.. */
@@ -24,15 +22,6 @@ chai.use(chaiHttp);
 
 var Promise = require('bluebird');
 
-function getPages(user, host) {
-	return new Promise(function(resolve, reject) {
-		PagesService.list(user, host, function(pages) {
-			resolve(pages);
-		}, function(err) {
-			reject(err);
-		});
-	});
-}
 function getResources(user, host) {
 	return new Promise(function(resolve, reject) {
 		ResourcesService.list(user, host, function(pages) {
@@ -92,13 +81,6 @@ describe('crawler controller', function() {
 		});
 
 
-		it('should save pages', function() {
-			return getPages(process.env.testUser, process.env.testHost)
-				.then(function(pages) {
-					console.log('pages');
-					pages.length.should.equal(5);
-				});
-		});
 		it('should save resource', function() {
 			return getResources(process.env.testUser, process.env.testHost)
 				.then(function(resources) {
@@ -118,7 +100,7 @@ describe('crawler controller', function() {
 	describe('clearPagesAndResourcesForSite()', function() {
 		it('should delete all pages and resources in db for a specified user and url', function() {
 
-			return fillPages().then(fillResources).then(function() {
+			return fillResources.then(function() {
 					return crawlerCtrl.clearPagesAndResourcesForSite(process.env.testUser, process.env.testHost, function(obj) {
 						resolve(obj);
 					}, function(err) {

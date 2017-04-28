@@ -27,10 +27,9 @@ function unRegister(user, host) {
     if( isRegistered(user,host) !== undefined ) {
         console.log('delete registered: ', host);
         delete registered[user+"::"+host];
-        currCrawls.delete(user, host);
     }
 
-    console.log('unRegister crawl: ', crawl);
+    currCrawls.delete(user, host);
     
     return Resources.remove({ user: user, host: host })
         .then(function() {

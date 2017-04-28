@@ -59,10 +59,6 @@ function crawl(user, host, crawlOptions) {
 			crawlOptions: crawlOptions,
 			comb: _combCrawler,
 			complete: function(report) {
-
-				//3. Get Heap dump
-				process.kill(process.pid, 'SIGUSR2');
-
 				startTimerForNextCrawl(user, host, crawlOptions.crawlFrequency);
 				resolve(report);
 			}
@@ -129,6 +125,8 @@ function updateSiteWithRemove(update) {
 */
 function crawlSequence(user, host) {
 
+	process.kill(process.pid, 'SIGUSR2');
+
 	activeCrawls++;
 
 	return new Promise(function(resolve, reject) {
@@ -172,6 +170,11 @@ function crawlSequence(user, host) {
 			console.log('siteUpdate: ', siteUpdate);
 
 			activeCrawls--;
+
+			// setTimeout(function() {
+			// 	global.gc();
+			// 	process.kill(process.pid, 'SIGUSR2');
+			// }, 15000);
 
 			if(o.report.firstComb) return updateSiteWithRemove(siteUpdate);
 			else return updateSiteNoRemove(siteUpdate);

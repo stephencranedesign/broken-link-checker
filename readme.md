@@ -18,45 +18,94 @@ This is an node/express app with a mongo/mongoose db.
 2) download the repo
   - git clone https://github.com/stephencranedesign/broken-link-checker
   - npm install
-  - node server
+
+3) start mongod
+4) call node server
 
 ### EndPoints
 
-/api/user/create
-	[post] 
-		- name
-		- password
-/api/user/delete
-	[post] 
-		- name
+[post] /api/user/create
+``` js
+// body
+ { 
+ 	name, 
+ 	password 
+ }
+```
+
+[post] /api/user/delete
+``` js
+// body
+ { 
+ 	name
+ }
+```
+
+[post] /api/authenticate - returns JWT Access token
+``` js
+// body
+ { 
+  name,
+  password
+ }
+```
 
 [get] /api/:user/crawler/:host/status - crawls for a specific user / host
+
 [get] /api/crawler/status - crawls for all users
 
-[post] /api/:user/crawler/:host/register - requires access token 
-	- headers
-		authorization: JWT access token
-	- body
-		- crawler options from [https://www.npmjs.com/package/simplecrawler]
-[post] /api/:user/crawler/:host/unRegister 
-	- headers
-		authorization: JWT access token
-	 
+[post] /api/:user/crawler/:host/register
+``` js
+// headers
+{
+ authorization: JWT access token
+}
 
+// body - crawler options from [https://www.npmjs.com/package/simplecrawler]
+ 
+```
+		
+[post] /api/:user/crawler/:host/unRegister 
+``` js
+// headers
+{
+ authorization: JWT access token
+}
+ 
+```
+	 
 [get] /api/:user/resources/:host/list
+
 [get] /api/:user/resources/:host/brokenLinks
+
 [get] /api/:user/resources/:host/brokenLinks/:from/:to
+
 [get] /api/:user/resources/:host/getWhitelist
 
 [post] /api/:user/resources/whitelist 
-	- body
-		- urls: a string or an array of strings for absolute resources to not be counted as broken.
-[post] /api/:user/resources/remove
+``` js
+// body 
+{
+	urls [string or array of strings for absolute resources to not be counted as broken]
+}
  
+```
+
+[post] /api/:user/resources/remove
+ ``` js
+// body 
+{
+	host
+	referrer
+}
+ 
+```
 
 [get] /api/:user/sites/list
 [get] /api/:user/sites/find/:host
 
 [post] /api/:user/sites/:host/updateConfig
-	- body
-		- crawler options from [https://www.npmjs.com/package/simplecrawler]
+``` js
+// body - crawler options from [https://www.npmjs.com/package/simplecrawler]
+ 
+```
